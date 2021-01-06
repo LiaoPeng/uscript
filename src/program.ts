@@ -1749,6 +1749,7 @@ export class Program extends DiagnosticEmitter {
         }
       }
     }
+    // if (flags) throw new Error();
     return flags;
   }
 
@@ -1771,7 +1772,9 @@ export class Program extends DiagnosticEmitter {
       this.checkDecorators(declaration.decorators,
         DecoratorFlags.GLOBAL |
         DecoratorFlags.FINAL |
-        DecoratorFlags.UNMANAGED
+        DecoratorFlags.UNMANAGED |
+        DecoratorFlags.STORAGE |
+        DecoratorFlags.CONTRACT
       )
     );
     if (!parent.add(name, element)) return null;
@@ -1875,7 +1878,8 @@ export class Program extends DiagnosticEmitter {
   ): FunctionPrototype | null {
     var name = declaration.name.text;
     var isStatic = declaration.is(CommonFlags.STATIC);
-    var acceptedFlags = DecoratorFlags.INLINE | DecoratorFlags.UNSAFE;
+    // Extension add
+    var acceptedFlags = DecoratorFlags.INLINE | DecoratorFlags.UNSAFE | DecoratorFlags.DEPLOYER;
     if (!declaration.is(CommonFlags.GENERIC)) {
       acceptedFlags |= DecoratorFlags.OPERATOR_BINARY
                     |  DecoratorFlags.OPERATOR_PREFIX
@@ -2306,7 +2310,8 @@ export class Program extends DiagnosticEmitter {
     parent: Element
   ): FunctionPrototype | null {
     var name = declaration.name.text;
-    var validDecorators = DecoratorFlags.UNSAFE | DecoratorFlags.BUILTIN;
+    // Extension Add
+    var validDecorators = DecoratorFlags.UNSAFE | DecoratorFlags.BUILTIN | DecoratorFlags.DEPLOYER;
     if (declaration.is(CommonFlags.AMBIENT)) {
       validDecorators |= DecoratorFlags.EXTERNAL;
     } else {
@@ -2643,7 +2648,15 @@ export enum DecoratorFlags {
   /** Is compiled lazily. */
   LAZY = 1 << 9,
   /** Is considered unsafe code. */
-  UNSAFE = 1 << 10
+  UNSAFE = 1 << 10,
+  /* Extension add START */
+  ACTION = 1 << 11,
+  STORAGE = 1 << 12,
+  DEPLOYER = 1 << 13,
+  CONTRACT = 1 << 14,
+  DATABASE = 1 << 15,
+  PRIMARYID = 1 << 16,
+  /* Extension add END */
 }
 
 export namespace DecoratorFlags {
@@ -2663,6 +2676,11 @@ export namespace DecoratorFlags {
       case DecoratorKind.BUILTIN: return DecoratorFlags.BUILTIN;
       case DecoratorKind.LAZY: return DecoratorFlags.LAZY;
       case DecoratorKind.UNSAFE: return DecoratorFlags.UNSAFE;
+      /* Extension add START */
+      case DecoratorKind.CONTRACT: return DecoratorFlags.CONTRACT;
+      case DecoratorKind.DEPLOYER: return DecoratorFlags.DEPLOYER;
+      case DecoratorKind.STORAGE: return DecoratorFlags.STORAGE;
+      /* Extension add END */
       default: return DecoratorFlags.NONE;
     }
   }

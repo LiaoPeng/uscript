@@ -40,6 +40,7 @@ const optionsUtil = require("./util/options");
 const mkdirp = require("./util/mkdirp");
 const find = require("./util/find");
 const binaryen = global.binaryen || (global.binaryen = require("binaryen"));
+const preprocess = require("./ext/preprocess");
 
 const dynrequire = typeof __webpack_require__ === "function"
   ? __non_webpack_require__
@@ -79,9 +80,11 @@ var assemblyscript;
   try {
     // note that this case will always trigger in recent node.js versions for typical installs
     // see: https://nodejs.org/api/packages.html#packages_self_referencing_a_package_using_its_name
+    throw new Error();
     assemblyscript = require("assemblyscript");
   } catch (e) {
     try { // `asc` on the command line (unnecessary in recent node)
+      throw new Error();
       assemblyscript = dynrequire("../dist/assemblyscript.js");
     } catch (e) {
       try { // `asc` on the command line without dist files (unnecessary in recent node)
@@ -92,6 +95,7 @@ var assemblyscript;
         });
         dynrequire("../src/glue/js");
         assemblyscript = dynrequire("../src");
+        console.log('load assemblyscript');
       } catch (e_ts) {
         try { // `require("dist/asc.js")` in explicit browser tests
           assemblyscript = dynrequire("./assemblyscript");
@@ -663,6 +667,9 @@ exports.main = function main(argv, options, callback) {
 
     stats.parseCount++;
     stats.parseTime += measure(() => {
+      // console.log('sourcePath', sourcePath);
+      // console.log('sourceText', sourceText);
+      process.sourceText = sourceText;
       assemblyscript.parse(program, sourceText, sourcePath, true);
     });
   }
@@ -705,9 +712,11 @@ exports.main = function main(argv, options, callback) {
   }
 
   var module;
+  var abiInfo;
   stats.compileCount++;
   stats.compileTime += measure(() => {
     module = assemblyscript.compile(program);
+    abiInfo = assemblyscript.getAbiInfo(program);
   });
   var numErrors = checkDiagnostics(program, stderr);
   if (numErrors) {
@@ -808,7 +817,8 @@ exports.main = function main(argv, options, callback) {
                  || opts.binaryFile != null
                  || opts.jsFile != null
                  || opts.tsdFile != null
-                 || opts.idlFile != null;
+                 || opts.idlFile != null
+                 || opts.sourceFile != null;
 
     // Write binary
     if (opts.binaryFile != null) {
@@ -853,6 +863,14 @@ exports.main = function main(argv, options, callback) {
         }
       }
     }
+
+    // Extension add START
+    if (opts.sourceFile != null || !hasOutput) {
+      out = abiInfo.exportIndent.toString();
+      writeFile(opts.sourceFile, process.sourceText + out, baseDir);
+      // preprocess.outputCodeFile(abiInfo, hasOutput, opts, stats, baseDir, writeFile);
+    }
+    // Extension add END
 
     // Write text (also fallback)
     if (opts.textFile != null || !hasOutput) {

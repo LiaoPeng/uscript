@@ -951,7 +951,15 @@ export enum DecoratorKind {
   EXTERNAL,
   BUILTIN,
   LAZY,
-  UNSAFE
+  UNSAFE,
+  /* Extension add START */
+  ACTION,
+  STORAGE,
+  DEPLOYER,
+  CONTRACT,
+  DATABASE,
+  PRIMARYID
+  /* Extension add END */
 }
 
 export namespace DecoratorKind {
@@ -962,10 +970,26 @@ export namespace DecoratorKind {
       let nameStr = (<IdentifierExpression>nameNode).text;
       assert(nameStr.length);
       switch (nameStr.charCodeAt(0)) {
+        /* Extension add START */
+        case CharCode.a: {
+          if (nameStr == "action") return DecoratorKind.ACTION;
+          break;
+        }
+        /* Extension add END */
         case CharCode.b: {
           if (nameStr == "builtin") return DecoratorKind.BUILTIN;
           break;
         }
+        /* Extension add START */
+        case CharCode.c: {
+          if (nameStr == 'contract') return DecoratorKind.CONTRACT;
+          break;
+        }
+        case CharCode.d: {
+          if (nameStr == 'deployer') return DecoratorKind.DEPLOYER;
+          break;
+        }
+        /* Extension add END */
         case CharCode.e: {
           if (nameStr == "external") return DecoratorKind.EXTERNAL;
           break;
@@ -990,6 +1014,12 @@ export namespace DecoratorKind {
           if (nameStr == "operator") return DecoratorKind.OPERATOR;
           break;
         }
+        /* Extension add START */
+        case CharCode.s: {
+          if (nameStr == "storage") return DecoratorKind.STORAGE;
+          break;
+        }
+        /* Extension add END */
         case CharCode.u: {
           if (nameStr == "unmanaged") return DecoratorKind.UNMANAGED;
           if (nameStr == "unsafe") return DecoratorKind.UNSAFE;
