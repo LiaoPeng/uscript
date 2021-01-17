@@ -33,8 +33,6 @@ import {
     AbiHelper
 } from "./abi";
 
-import { PATH_DELIMITER } from "../common";
-
 export class AstUtil {
 
     /**
@@ -175,7 +173,7 @@ export class AstUtil {
     static isActionFnPrototype(element: Element): boolean {
         if (element.kind == ElementKind.FUNCTION_PROTOTYPE) {
             let funcType = <FunctionPrototype>element;
-            return AstUtil.haveSpecifyDecorator(funcType.declaration, DecoratorKind.ACTION);
+            return AstUtil.haveSpecifyDecorator(funcType.declaration, DecoratorKind.MESSAGE);
         }
         return false;
     }
@@ -237,14 +235,23 @@ interface TypeInfo {
     getArgs(): string[];
     getSourceType(typeName: string): string;
 }
-export class TypeNodeAnalyzer {
+
+export class TypeNodeDesc {
+    abiType: AbiTypeEnum | undefined;
+    typeName: string = "";
+    codecType: string | undefined = "";
+    originalType: string = "";
+    defaultVal: string | undefined = "";
+}
+
+export class TypeNodeAnalyzer extends TypeNodeDesc{
 
     parent: Element;
     typeNode: NamedTypeNode;
-    typeName: string;
-    abiType: AbiTypeEnum | undefined;
+    subTypes: TypeNodeAnalyzer[] = new Array();
 
     constructor(parent: Element ,typeNode: NamedTypeNode) {
+        super();
         this.parent = parent;
         this.typeNode = typeNode;
         // Here various clz[]'s type name is [], not clz.

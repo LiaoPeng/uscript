@@ -818,6 +818,7 @@ exports.main = function main(argv, options, callback) {
                  || opts.jsFile != null
                  || opts.tsdFile != null
                  || opts.idlFile != null
+                 || opts.abiFile != null
                  || opts.sourceFile != null;
 
     // Write binary
@@ -866,10 +867,15 @@ exports.main = function main(argv, options, callback) {
 
     // Extension add START
     if (opts.sourceFile != null || !hasOutput) {
-      out = abiInfo.exportIndent.toString();
+      out = preprocess.outputCode(abiInfo, path.resolve(baseDir));
       writeFile(opts.sourceFile, process.sourceText + out, baseDir);
-      // preprocess.outputCodeFile(abiInfo, hasOutput, opts, stats, baseDir, writeFile);
     }
+
+    if (opts.sourceFile != null || !hasOutput) {
+      out = preprocess.outputAbi(abiInfo, path.resolve(baseDir));
+      writeFile(opts.abiFile, out, baseDir);
+    }
+
     // Extension add END
 
     // Write text (also fallback)

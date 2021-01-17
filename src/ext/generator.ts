@@ -1,7 +1,8 @@
 import { ParameterNode, NamedTypeNode, FieldDeclaration, TypeNode, NodeKind } from "../ast";
 import { FunctionPrototype, ClassPrototype, ElementKind, DeclaredElement, FieldPrototype } from "../program";
 import { Indent } from "./primitiveutil";
-import { TypeNodeAnalyzer, AstUtil } from "./astutil";
+import { TypeNodeAnalyzer, AstUtil, TypeNodeDesc } from "./astutil";
+import { ExportDef, ExportMethod } from "./abi";
 
 export class ExportGenerator {
 
@@ -35,101 +36,75 @@ export class ExportGenerator {
     ["string", "string"]
   ]);
 
+  static defaultValMap: Map<string, string> = new Map([
+    ["i8", "0"],
+    ["i16", "0"],
+    ["i32", "0"],
+    ["i64", "0"],
+    ["isize", "0"],
+    ["u8", "0"],
+    ["u16", "0"],
+    ["u32", "0"],
+    ["u64", "0"],
+    ["usize", "0"],
+    ["f32", "0"],
+    ["f64", "0"],
+    ["bool", "false"],
+    ["boolean", "false"],
+    ["string", "''"]
+  ]);
+
 
   static getWrapperType(asType: string): string | undefined {
     return ExportGenerator.typeWrapperMap.get(asType);
   }
 
-  /**
-   * function isSelectorEqual(l: u8[], r: u8[]): boolean {
-  if (l.length != r.length) return false;
-  for (let i = 0; i < l.length; i++) {
-    if (l[i] != r[i]) return false;
-  }
-  return true;
-}
-   */
-  generateEqualMethod(): Indent {
-    let indent = new Indent();
-    indent.add(`function isSelectorEqual(l: u8[], r: u8[]): boolean {`).increase();
-    indent.add(`if (l.length != r.length) return false`);
-    indent.add(`for (let i = 0; i < l.length; i++) {`).increase();
-    indent.add(`if (l[i] != r[i]) return false;`);
-    indent.decrease().add(`}`);
-    indent.add(`return true;`);
-    indent.decrease().add(`}`);
-    return indent;
-  }
-
-  generateDeployMethod(): Indent {
-    let deployIndent = new Indent();
-    deployIndent.add(`export function deploy(): i32 {`).increase();
-    deployIndent.add(`const reader = MessageInputReader.readInput();`);
-    deployIndent.add(`const fnSelector = reader.fnSelector;`);
-    deployIndent.add(`let ${this.instanceName} = new ${this.className}();`);
-
+  generateExportDef(): ExportDef {
+    let deployDef: ExportDef = new ExportDef(this.className);
     if (this.classPrototype.instanceMembers) {
       for (let [key, instance] of this.classPrototype.instanceMembers) {
         if (instance && AstUtil.isDeployerFnPrototype(instance)) {
-          let method = ExportGenerator.generateCondition(this.instanceName, <FunctionPrototype>instance);
-          deployIndent.addAll(method.getContent());
+          let method = ExportGenerator.generateMethod(this.instanceName, <FunctionPrototype>instance);
+          deployDef.deployers.push(method);
+        } else if (instance && AstUtil.isActionFnPrototype(instance)){
+          let method = ExportGenerator.generateMethod(this.instanceName, <FunctionPrototype>instance);
+          deployDef.messages.push(method);
         }
       }
     }
-    deployIndent.decrease().add(`}`);
-    return deployIndent;
+    return deployDef;
   }
 
-  generateCallMethod(): Indent {
-    let callIndent = new Indent();
-    callIndent.add(`export function call(): i32 {`).increase();
-    callIndent.add(`const reader = MessageInputReader.readInput();`);
-    callIndent.add(`const fnSelector = reader.fnSelector;`);
-    callIndent.add(`let ${this.instanceName} = new ${this.className}();`);
-
-    if (this.classPrototype.instanceMembers) {
-      for (let [key, instance] of this.classPrototype.instanceMembers) {
-        if (instance && AstUtil.isActionFnPrototype(instance)) {
-          let method = ExportGenerator.generateCondition(this.instanceName, <FunctionPrototype>instance);
-          callIndent.addAll(method.getContent());
-        }
-      }
-    }
-    callIndent.decrease().add(`}`);
-    return callIndent;
-  }
-
-  static generateCondition(instaceName: string, funcProto: FunctionPrototype): Indent {
+  static generateMethod(instaceName: string, funcProto: FunctionPrototype): ExportMethod {
+    let deployMethod: ExportMethod = new ExportMethod();
     let params = funcProto.functionTypeNode.parameters; // FunctionDeclaration parameter types
-    let funcName = funcProto.name;
-    let paramters = [];
-    let indent: Indent = new Indent(1);
-    indent.add(`const ${funcName}selector: u8[] = [];`);
-    indent.add(`if (isSelectorEqual(fnSelector, ${funcName}selector)) {`).increase();
+    deployMethod.methodName = funcProto.name;
+    
     for (let index = 0; index < params.length; index++) {
       let type: ParameterNode = params[index];
+      let paramDesc: TypeNodeDesc = new TypeNodeDesc();
+
       let parameterType = type.type.range.toString();
       let parameterName = type.name.range.toString();
       // console.log("parameterType", parameterType);
       // console.log("parameterName", parameterName);
-      indent.add(`const p${index} = reader.fnParameters;`);
-      indent.add(`const v${index} = ${ExportGenerator.typeWrapperMap.get(parameterType)}.fromU8a(p${index}).unwrap();`);
-      paramters.push(`v${index}`);
-    }
 
+      paramDesc.originalType = parameterType;
+      paramDesc.codecType = ExportGenerator.typeWrapperMap.get(parameterType)
+      paramDesc.defaultVal = ExportGenerator.defaultValMap.get(parameterType);
+      deployMethod.paramters.push(paramDesc);
+    }
     let returnType = funcProto.functionTypeNode.returnType;
+    // console.log("returnType", returnType.range.toString())
     let rtnNodeAnly = new TypeNodeAnalyzer(funcProto, <NamedTypeNode>returnType);
-
-    if (rtnNodeAnly.isVoid()) {
-      indent.add(`${instaceName}.${funcName}(${paramters.join(",")});`);
-    } else {
+    let returnTypeDesc: TypeNodeDesc = new TypeNodeDesc();
+    if (!rtnNodeAnly.isVoid()) {
       let wrapType = ExportGenerator.typeWrapperMap.get(rtnNodeAnly.typeName);
-      indent.add(`const rs = ${instaceName}.${funcName}(${paramters.join(",")});`);
-      indent.add(`ReturnData.set<${wrapType}>(new ${wrapType}(rs));`);
+      returnTypeDesc.codecType = wrapType;
+      deployMethod.hasReturnVal = true;
     }
-    indent.decrease().add(`}`);
-    // console.log(indent.toString());
-    return indent;
+    deployMethod.returnType = returnTypeDesc;
+    return deployMethod;
   }
 }
 

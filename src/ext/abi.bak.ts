@@ -37,7 +37,6 @@ import {
 import {
   AstUtil,
   TypeNodeAnalyzer,
-  TypeNodeDesc,
   AbiTypeEnum
 } from "./astutil";
 
@@ -51,6 +50,8 @@ import {
   ExportGenerator, StorageGenerator
 } from './generator';
 
+
+
 class StructDef {
   name: string = '';
   fields: Array<Object> = new Array<Object>();
@@ -61,24 +62,17 @@ class StructDef {
   }
 }
 
-export class ExportMethod {
-  methodName: string = "";
-  paramters: TypeNodeDesc[] = new Array();
-  hasReturnVal: boolean = false;
-  returnType: TypeNodeDesc | undefined;
+// export class DeployMethod {
+//   typename: string;
+// }
+
+
+export class DeployDef {
+  // className: string;
+  // methods: DeployMethod[];
 }
 
-export class ExportDef {
-  className: string;
-  deployers: ExportMethod[] = new Array();
-  messages: ExportMethod[] = new Array();
-
-  constructor(clzName: string) {
-    this.className = clzName;
-  }
-}
-
-class AbiAliasDef {
+export class AbiAliasDef {
   new_type_name: string;
   type: string;
 
@@ -133,6 +127,11 @@ export class AbiHelper {
     ["boolean", "bool"],
     ["string", "string"],
     ["String", "string"],
+    ["account_name", "name"],
+    ["permission_name", "name"],
+    ["action_name", "name"],
+    ["weight_type", "uint16"],
+    ["Asset", "asset"]
   ]);
 }
 
@@ -171,7 +170,6 @@ export class AbiInfo {
   structsLookup: Map<string, StructDef> = new Map();
   elementLookup: Map<string, Element> = new Map();
   exportIndent: Indent = new Indent();
-  exportDef: ExportDef = new ExportDef("");
   insertPointsLookup: Map<string, Array<InsertPoint>> = new Map<string, Array<InsertPoint>>();
 
   constructor(program: Program) {
@@ -304,7 +302,103 @@ export class AbiInfo {
   /**
   *  Resolve ClassPrototype to dispatcher
   */
-  
+  private resolveClassDispatcher(clzPrototype: ClassPrototype): Array<string> {
+    // if (clzPrototype.instanceMembers && AstUtil.extendedContract(clzPrototype)) {
+    if (clzPrototype.instanceMembers && AstUtil.haveSpecifyDecorator(clzPrototype.declaration, DecoratorKind.CONTRACT)) {
+      let body = new Array<string>();
+      let hasActionDecorators = false;
+      let contractName = clzPrototype.name; //
+      let contractVarName = "_" + contractName; // TODO To enhancement the code
+
+      body.push(`  let ${contractVarName} = new ${contractName}(receiver);`);
+      body.push(`  ${contractVarName}.setActionName(actH, actL);`);
+      body.push(`  if (${contractVarName}.filterAction(code)) {`);
+      body.push(`    ${contractVarName}.onInit();`);
+      body.push(`    let ds = ${contractVarName}.getDataStream();`);
+
+      for (let [key, instance] of clzPrototype.instanceMembers) {
+        if (AstUtil.isActionFnPrototype(instance)) {
+          let funcProto = <FunctionPrototype>instance;
+          hasActionDecorators = true;
+          this.resolveFunctionPrototype(funcProto);
+          let declaration = funcProto.declaration;
+
+          let funcName = declaration.name.range.toString();
+          let params = funcProto.functionTypeNode.parameters; // FunctionDeclaration parameter types
+          let returnType = funcProto.functionTypeNode.returnType;
+
+          AbiUtils.checkActionName(funcName);
+          body.push(`    if (${contractVarName}.isAction("${funcName}")){`);
+
+          let fields = new Array<string>();
+          for (let index = 0; index < params.length; index++) {
+            let type: ParameterNode = params[index];
+            let parameterType = type.type.range.toString();
+            let parameterName = type.name.range.toString();
+            let typeNodeAnalyzer: TypeNodeAnalyzer = new TypeNodeAnalyzer(funcProto, <NamedTypeNode>type.type);
+
+            if (typeNodeAnalyzer.isArray()) {
+              let argAbiTypeEnum = typeNodeAnalyzer.getArrayArgAbiTypeEnum();
+              let argTypeName = typeNodeAnalyzer.getArrayArg();
+              if (argAbiTypeEnum == AbiTypeEnum.NUMBER) {
+                body.push(`      let ${parameterName} = ds.readVector<${argTypeName}>();`);
+              } else if (argAbiTypeEnum == AbiTypeEnum.STRING) {
+                body.push(`      let ${parameterName} = ds.readStringVector();`);
+              } else {
+                body.push(`      let ${parameterName} = ds.readComplexVector<${argTypeName}>();`);
+              }
+            } else {
+              let abiTypeEnum = typeNodeAnalyzer.abiTypeEnum;
+              if (abiTypeEnum == AbiTypeEnum.STRING) {
+                body.push(`      let ${parameterName} = ds.readString();`);
+              } else if (abiTypeEnum == AbiTypeEnum.NUMBER) {
+                body.push(`      let ${parameterName} = ds.read<${typeNodeAnalyzer.typeName}>();`);
+              } else {
+                this.getStructFromNode(funcProto, type.type);
+                body.push(`      let ${parameterName} = new ${parameterType}();`);
+                body.push(`      ${parameterName}.deserialize(ds);`);
+              }
+            }
+            fields.push(parameterName);
+          }
+
+          let rtnNodeAnly = new TypeNodeAnalyzer(funcProto, <NamedTypeNode>returnType);
+          if (rtnNodeAnly.isVoid()) {
+            body.push(`      ${contractVarName}.${funcName}(${fields.join(",")});`);
+          } else {
+            body.push(`      let result = ${contractVarName}.${funcName}(${fields.join(",")});`);
+            let typeName = rtnNodeAnly.isArray() ? rtnNodeAnly.getArrayArg() : rtnNodeAnly.typeName;
+            let element = rtnNodeAnly.findElement(typeName);
+            if (element && AstUtil.isClassPrototype(element)) {
+              let declaration = <ClassDeclaration>(<ClassPrototype>element).declaration;
+              if (!AstUtil.impledReturnable(declaration)) {
+                throw new Error(`Class ${typeName} should implement the Returnable interface. Location in ${AstUtil.location(declaration.range)}`);
+              }
+            }
+            if (rtnNodeAnly.isArray()) {
+              body.push(`      ${contractVarName}.returnArray<${rtnNodeAnly.getArrayArg()}>(result);`);
+            } else {
+              body.push(`      ${contractVarName}.returnVal<${rtnNodeAnly.typeName}>(result);`);
+            }
+          }
+          body.push("    }");
+        }
+      }
+      // to support onError
+      body.push(`    if (${contractVarName}.isAction("onerror")) {`);
+      body.push(`        ${contractVarName}.onError();`);
+      body.push(`    }`);
+
+      body.push(`    ${contractVarName}.onStop();`);
+      body.push("  }");
+      this.resolveDatabaseDecorator(clzPrototype);
+      if (hasActionDecorators) {
+        let impledInterfaces = AstUtil.impledInterfaces(clzPrototype);
+        return body;
+      }
+    }
+    return new Array();
+  }
 
   private getActionAbility(funcPrototype: FunctionPrototype): string {
     var statement = funcPrototype.declaration;
@@ -376,9 +470,12 @@ export class AbiInfo {
     for (let [key, element] of this.program.elementsByName) {
       // find class 
       if (!this.elementLookup.has(key) && this.isContractClassPrototype(element)) {
-        let exportGenerator = new ExportGenerator(<ClassPrototype>element)
-      
-        this.exportDef = exportGenerator.generateExportDef();
+        let exportGenerator = new ExportGenerator(<ClassPrototype>element);
+        this.exportIndent.joinIndents([exportGenerator.generateEqualMethod()]);
+        this.exportIndent.joinIndents([exportGenerator.generateCallMethod()]);
+        this.exportIndent.joinIndents([exportGenerator.generateDeployMethod()]);
+        // console.log(exportGenerator.generateCallMethod().toString());
+        // console.log(exportGenerator.generateDeployMethod().toString());
       }
 
       if (!this.elementLookup.has(key) && this.isStoreClassPrototype(element)) {
@@ -386,6 +483,17 @@ export class AbiInfo {
         this.exportIndent.joinIndents([storeGenerator.getBody()]);
       }
     }
+  }
+
+
+  // Concat the dispatch message
+  private assemblyDispatch(body: Array<string>): string {
+    var dispatchIndenter = new Indent(0);
+    dispatchIndenter.add("export function apply(receiver: u64, code: u64, actH: u64, actL: u64): void {");
+    dispatchIndenter.addAll(body);
+    console.log("body", body)
+    dispatchIndenter.add("}");
+    return dispatchIndenter.toString();
   }
 }
 

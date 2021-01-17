@@ -2650,7 +2650,7 @@ export enum DecoratorFlags {
   /** Is considered unsafe code. */
   UNSAFE = 1 << 10,
   /* Extension add START */
-  ACTION = 1 << 11,
+  MESSAGE = 1 << 11,
   STORAGE = 1 << 12,
   DEPLOYER = 1 << 13,
   CONTRACT = 1 << 14,

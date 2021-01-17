@@ -953,7 +953,7 @@ export enum DecoratorKind {
   LAZY,
   UNSAFE,
   /* Extension add START */
-  ACTION,
+  MESSAGE,
   STORAGE,
   DEPLOYER,
   CONTRACT,
@@ -970,12 +970,6 @@ export namespace DecoratorKind {
       let nameStr = (<IdentifierExpression>nameNode).text;
       assert(nameStr.length);
       switch (nameStr.charCodeAt(0)) {
-        /* Extension add START */
-        case CharCode.a: {
-          if (nameStr == "action") return DecoratorKind.ACTION;
-          break;
-        }
-        /* Extension add END */
         case CharCode.b: {
           if (nameStr == "builtin") return DecoratorKind.BUILTIN;
           break;
@@ -1010,6 +1004,12 @@ export namespace DecoratorKind {
           if (nameStr == "lazy") return DecoratorKind.LAZY;
           break;
         }
+        /* Extension add START */
+        case CharCode.m: {
+          if (nameStr == "message") return DecoratorKind.MESSAGE;
+          break;
+        }
+        /* Extension add END */
         case CharCode.o: {
           if (nameStr == "operator") return DecoratorKind.OPERATOR;
           break;
