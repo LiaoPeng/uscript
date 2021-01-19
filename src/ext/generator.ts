@@ -101,6 +101,7 @@ export class ExportGenerator {
     if (!rtnNodeAnly.isVoid()) {
       let wrapType = ExportGenerator.typeWrapperMap.get(rtnNodeAnly.typeName);
       returnTypeDesc.codecType = wrapType;
+      returnTypeDesc.originalType = rtnNodeAnly.typeName;
       deployMethod.hasReturnVal = true;
     }
     deployMethod.returnType = returnTypeDesc;

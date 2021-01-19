@@ -80,7 +80,8 @@ var assemblyscript;
   try {
     // note that this case will always trigger in recent node.js versions for typical installs
     // see: https://nodejs.org/api/packages.html#packages_self_referencing_a_package_using_its_name
-    throw new Error();
+    // assemblyscript = dynrequire("../dist/assemblyscript.js");
+    // throw new Error();
     assemblyscript = require("assemblyscript");
   } catch (e) {
     try { // `asc` on the command line (unnecessary in recent node)
