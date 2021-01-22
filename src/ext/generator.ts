@@ -1,10 +1,9 @@
 import { ParameterNode, NamedTypeNode, FieldDeclaration, TypeNode, NodeKind } from "../ast";
 import { FunctionPrototype, ClassPrototype, ElementKind, DeclaredElement, FieldPrototype } from "../program";
-import { Indent } from "./primitiveutil";
 import { TypeNodeAnalyzer, AstUtil, TypeNodeDesc } from "./astutil";
-import { ExportDef, ExportMethod } from "./abi";
+import { ExportDef, ExportMethod, StorageDef, FieldDef } from "./abi";
 
-export class ExportGenerator {
+export class ContractGenerator {
 
   private classPrototype: ClassPrototype;
   private className: string;
@@ -55,19 +54,29 @@ export class ExportGenerator {
   ]);
 
 
-  static getWrapperType(asType: string): string | undefined {
-    return ExportGenerator.typeWrapperMap.get(asType);
+  private getWrapperType(asType: string): string {
+    let type: string | undefined =  ContractGenerator.typeWrapperMap.get(asType);
+    return type == undefined ? "" : type;
+  }
+
+  private getDefaultVal(asType: string): string {
+    let type: string | undefined = ContractGenerator.typeWrapperMap.get(asType);
+    return type == undefined ? "" : type;
   }
 
   generateExportDef(): ExportDef {
     let deployDef: ExportDef = new ExportDef(this.className);
     if (this.classPrototype.instanceMembers) {
-      for (let [key, instance] of this.classPrototype.instanceMembers) {
+      for (let [_, instance] of this.classPrototype.instanceMembers) {
         if (instance && AstUtil.isDeployerFnPrototype(instance)) {
-          let method = ExportGenerator.generateMethod(this.instanceName, <FunctionPrototype>instance);
+          let method = this.generateMethod(this.instanceName, <FunctionPrototype>instance);
+          let defaultMthod = new ExportMethod();
+          defaultMthod.methodName = "default";
+          defaultMthod.paramters = [];
           deployDef.deployers.push(method);
+          deployDef.deployers.push(defaultMthod);
         } else if (instance && AstUtil.isActionFnPrototype(instance)){
-          let method = ExportGenerator.generateMethod(this.instanceName, <FunctionPrototype>instance);
+          let method = this.generateMethod(this.instanceName, <FunctionPrototype>instance);
           deployDef.messages.push(method);
         }
       }
@@ -75,7 +84,7 @@ export class ExportGenerator {
     return deployDef;
   }
 
-  static generateMethod(instaceName: string, funcProto: FunctionPrototype): ExportMethod {
+  generateMethod(instaceName: string, funcProto: FunctionPrototype): ExportMethod {
     let deployMethod: ExportMethod = new ExportMethod();
     let params = funcProto.functionTypeNode.parameters; // FunctionDeclaration parameter types
     deployMethod.methodName = funcProto.name;
@@ -90,18 +99,17 @@ export class ExportGenerator {
       // console.log("parameterName", parameterName);
 
       paramDesc.originalType = parameterType;
-      paramDesc.codecType = ExportGenerator.typeWrapperMap.get(parameterType)
-      paramDesc.defaultVal = ExportGenerator.defaultValMap.get(parameterType);
+      paramDesc.codecType = this.getWrapperType(parameterType)
+      paramDesc.defaultVal = this.getDefaultVal(parameterType);
       deployMethod.paramters.push(paramDesc);
     }
     let returnType = funcProto.functionTypeNode.returnType;
-    // console.log("returnType", returnType.range.toString())
-    let rtnNodeAnly = new TypeNodeAnalyzer(funcProto, <NamedTypeNode>returnType);
+    let returnTypeAnalyzer = new TypeNodeAnalyzer(funcProto, <NamedTypeNode>returnType);
     let returnTypeDesc: TypeNodeDesc = new TypeNodeDesc();
-    if (!rtnNodeAnly.isVoid()) {
-      let wrapType = ExportGenerator.typeWrapperMap.get(rtnNodeAnly.typeName);
+    if (!returnTypeAnalyzer.isReturnVoid()) {
+      let wrapType = this.getWrapperType(returnTypeAnalyzer.typeName);
       returnTypeDesc.codecType = wrapType;
-      returnTypeDesc.originalType = rtnNodeAnly.typeName;
+      returnTypeDesc.originalType = returnTypeAnalyzer.typeName;
       deployMethod.hasReturnVal = true;
     }
     deployMethod.returnType = returnTypeDesc;
@@ -112,29 +120,22 @@ export class ExportGenerator {
 export class StorageGenerator {
 
   private classPrototype: ClassPrototype;
-  private fieldIndents: Indent[] = new Array<Indent>();
-  private methodIndents: Indent[] = new Array<Indent>();
+  storageDef: StorageDef;
 
   constructor(clzPrototype: ClassPrototype) {
+    this.storageDef = new StorageDef();
     this.classPrototype = clzPrototype;
     if (this.classPrototype.instanceMembers) {
       this.resolveInstanceMembers(this.classPrototype.instanceMembers);
     }
   }
 
-  getBody(): Indent {
-    let bodyIndent: Indent = new Indent();
-    bodyIndent.add(`class ${this.classPrototype.name} {`);
-    bodyIndent.joinIndents(this.fieldIndents).joinIndents(this.methodIndents);
-    bodyIndent.add(`}`);
-    return bodyIndent;
-  }
-
   resolveInstanceMembers(instanceMembers: Map<string, DeclaredElement>): void {
+    this.storageDef.className = this.classPrototype.name;
     for (let [fieldName, element] of instanceMembers) {
       if (element.kind == ElementKind.FIELD_PROTOTYPE) {
         // console.log("fieldName", fieldName);
-        this.resolveFieldPrototype(<FieldPrototype>element)
+        this.resolveFieldPrototype(<FieldPrototype>element);
       }
     }
   }
@@ -143,55 +144,18 @@ export class StorageGenerator {
     let fieldDeclaration: FieldDeclaration = <FieldDeclaration>fieldPrototype.declaration;
     let commonType: TypeNode | null = fieldDeclaration.type;
     if (commonType && commonType.kind == NodeKind.NAMEDTYPE) {
+      let fieldDef: FieldDef = new FieldDef();
       let typeNode = <NamedTypeNode>commonType;
       let varName = "_" + fieldPrototype.name;
       let key: string = varName;
       var typeNodeAnalyzer: TypeNodeAnalyzer = new TypeNodeAnalyzer(this.classPrototype, typeNode);
       let typeName = typeNodeAnalyzer.typeName;
-
-      let field: Indent = new Indent(2);
-      field.add(`private ${varName}: ${typeName} | null;`);
-      this.fieldIndents.push(field);
-
-      let getIndent = this.getField(fieldPrototype.name, key, typeNode);
-      let setIndent = this.setFiled(fieldPrototype.name, key, typeNode);
-      this.methodIndents.push(getIndent);
-      this.methodIndents.push(setIndent);
-
-      // console.log(`${field.toString()}`);
-      // console.log(`${getIndent.toString()}`);
-      // console.log(`${setIndent.toString()}`);
+      fieldDef.varName = varName;
+      fieldDef.fieldType = typeName;
+      fieldDef.fieldName = fieldPrototype.name;
+      let wrapType = ContractGenerator.typeWrapperMap.get(typeName);
+      fieldDef.fieldCodecType = wrapType;
+      this.storageDef.fields.push(fieldDef);
     }
-  }
-
-  getField(fieldName: string, key: string, typeNode: NamedTypeNode): Indent {
-    var typeNodeAnalyzer: TypeNodeAnalyzer = new TypeNodeAnalyzer(this.classPrototype, typeNode);
-    let typeName = typeNodeAnalyzer.typeName;
-    let varName = "_" + fieldName;
-    let wrapType = ExportGenerator.getWrapperType(typeName);
-    var indent: Indent = new Indent(2);
-    indent.add(`get ${fieldName}(): ${typeName} {`).increase();
-    indent.add(`if (this.${varName} === null) {`).increase();
-    indent.add(`const st = new Storage<${wrapType}>("${key}")`);
-    indent.add(`this.${varName} = st.load();`);
-    indent.decrease().add(`}`);
-    indent.add(`return this.${varName}!.unwrap();`);
-    indent.decrease().add(`}`);
-
-    return indent;
-  }
-
-  setFiled(fieldName: string, key: string, typeNode: NamedTypeNode): Indent {
-    var typeNodeAnalyzer: TypeNodeAnalyzer = new TypeNodeAnalyzer(this.classPrototype, typeNode);
-    let typeName = typeNodeAnalyzer.typeName;
-    let wrapType = ExportGenerator.getWrapperType(typeName);
-    var indent: Indent = new Indent(2);
-    let varName = "_" + fieldName;
-    indent.add(`set ${fieldName}(v: ${typeName}) {`).increase();
-    indent.add(`this.${varName} = new ${wrapType}(v);`);
-    indent.add(`const st = new Storage<${wrapType}>("${key}");`);
-    indent.add(`st.store(this.${varName});`);
-    indent.decrease().add(`}`);
-    return indent;
   }
 }

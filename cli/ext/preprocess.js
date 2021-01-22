@@ -10,7 +10,7 @@ Handlebars.registerHelper("each", function (context, options) {
   for (var i = 0, j = context.length; i < j; i++) {
     let data = context[i];
     data.index = i;
-    data.isMid = (i != j - 1 && i != 0)
+    data.isMid = (i != j - 1 || (i == 0 && j == 1))
     ret = ret + options.fn(data);
   }
   return ret;
@@ -34,6 +34,12 @@ function outputCode(abiInfo, baseDir) {
   const render = Handlebars.compile(mainTpl);
   const output = render(abiInfo);
   console.log("output", output)
+
+  let storeTpl = fs.readFileSync(baseDir + "/cli/ext/tpl/store.tpl", { encoding: "utf8" });
+  const store = Handlebars.compile(storeTpl)(abiInfo);
+ 
+  console.log("store", store)
+
   return output;
 }
 

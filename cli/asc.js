@@ -713,11 +713,11 @@ exports.main = function main(argv, options, callback) {
   }
 
   var module;
-  var abiInfo;
+  var contractInfo;
   stats.compileCount++;
   stats.compileTime += measure(() => {
     module = assemblyscript.compile(program);
-    abiInfo = assemblyscript.getAbiInfo(program);
+    contractInfo = assemblyscript.getContractInfo(program);
   });
   var numErrors = checkDiagnostics(program, stderr);
   if (numErrors) {
@@ -868,12 +868,12 @@ exports.main = function main(argv, options, callback) {
 
     // Extension add START
     if (opts.sourceFile != null || !hasOutput) {
-      out = preprocess.outputCode(abiInfo, path.resolve(baseDir));
+      out = preprocess.outputCode(contractInfo, path.resolve(baseDir));
       writeFile(opts.sourceFile, process.sourceText + out, baseDir);
     }
 
     if (opts.sourceFile != null || !hasOutput) {
-      out = preprocess.outputAbi(abiInfo, path.resolve(baseDir));
+      out = preprocess.outputAbi(contractInfo, path.resolve(baseDir));
       writeFile(opts.abiFile, out, baseDir);
     }
 

@@ -239,9 +239,9 @@ interface TypeInfo {
 export class TypeNodeDesc {
     abiType: AbiTypeEnum | undefined;
     typeName: string = "";
-    codecType: string | undefined = "";
+    codecType: string = "";
     originalType: string = "";
-    defaultVal: string | undefined = "";
+    defaultVal: string = "";
 }
 
 export class TypeNodeAnalyzer extends TypeNodeDesc{
@@ -262,7 +262,7 @@ export class TypeNodeAnalyzer extends TypeNodeDesc{
         return this.typeNode.range.toString();
     }
 
-    isVoid(): boolean {
+    isReturnVoid(): boolean {
         return this.typeName == "void";
     }
 

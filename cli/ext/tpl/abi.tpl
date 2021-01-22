@@ -6,7 +6,7 @@
     "compiler": "rustc 1.49.0-nightly"
   },
   "contract": {
-    "name": "{{name}}",
+    "name": "{{exportDef.className}}",
     "version": "0.1.0",
     "authors": [
       "[your_name] <[your_email]>"
@@ -14,45 +14,49 @@
   },
   "spec": {
     "constructors": [
+      {{#each exportDef.deployers}}
       {
         "args": [
+          {{#each paramters}}
           {
-            "name": "init_value",
+            "name": "{{typeName}}",
             "type": {
               "displayName": [
-                "bool"
+                "{{originalType}}"
               ],
               "type": 1
             }
-          }
+          }{{#if isMid}},{{/if}}
+          {{/each}}
         ],
         "docs": [
           " Constructor that initializes the `bool` value to the given `init_value`."
         ],
         "name": [
-          "new"
+          "{{methodName}}"
         ],
         "selector": "0xd183512b"
-      },
-      {
-        "args": [],
-        "docs": [
-          " Constructor that initializes the `bool` value to `false`.",
-          "",
-          " Constructors can delegate to other constructors."
-        ],
-        "name": [
-          "default"
-        ],
-        "selector": "0x6a3712e2"
-      }
+      }{{#if isMid}},{{/if}}
+      {{/each}}
     ],
     "docs": [],
     "events": [],
     "messages": [
       {{#each exportDef.messages}}
       {
-        "args": [],
+        "args": [
+          {{#each paramters}}
+          {
+            "name": "{{typeName}}",
+            "type": {
+              "displayName": [
+                "{{originalType}}"
+              ],
+              "type": {{index}}
+            }
+          }{{#if isMid}},{{/if}}
+          {{/each}}
+        ],
         "docs": [],
         "mutates": false,
         "name": [

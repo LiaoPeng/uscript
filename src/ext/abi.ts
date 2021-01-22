@@ -48,7 +48,7 @@ import {
 } from "./primitiveutil";
 
 import {
-  ExportGenerator, StorageGenerator
+  ContractGenerator, StorageGenerator
 } from './generator';
 
 class StructDef {
@@ -76,6 +76,19 @@ export class ExportDef {
   constructor(clzName: string) {
     this.className = clzName;
   }
+}
+
+export class FieldDef {
+  fieldName: string = "";
+  fieldType: string = "";
+  fieldCodecType: string | undefined = "";
+  storeKey: string = "";
+  varName: string = "";
+}
+
+export class StorageDef {
+  className: string = "";
+  fields: FieldDef[] = new Array();
 }
 
 class AbiAliasDef {
@@ -161,7 +174,7 @@ class AbiDef {
   tables: Array<TableDef> = new Array<TableDef>();
 }
 
-export class AbiInfo {
+export class ContractInfo {
 
   abiInfo: AbiDef = new AbiDef();
   dispatch: string = '';
@@ -170,9 +183,9 @@ export class AbiInfo {
   typeAliasSet: Set<string> = new Set<string>();
   structsLookup: Map<string, StructDef> = new Map();
   elementLookup: Map<string, Element> = new Map();
-  exportIndent: Indent = new Indent();
   exportDef: ExportDef = new ExportDef("");
   insertPointsLookup: Map<string, Array<InsertPoint>> = new Map<string, Array<InsertPoint>>();
+  stores: StorageDef[] = new Array();
 
   constructor(program: Program) {
     this.program = program;
@@ -199,8 +212,6 @@ export class AbiInfo {
       this.typeAliasSet.add(asType);
     }
   }
-
-
 
   resolveDatabaseDecorator(clsProto: ClassPrototype): void {
     var decorators = clsProto.decoratorNodes;
@@ -376,19 +387,17 @@ export class AbiInfo {
     for (let [key, element] of this.program.elementsByName) {
       // find class 
       if (!this.elementLookup.has(key) && this.isContractClassPrototype(element)) {
-        let exportGenerator = new ExportGenerator(<ClassPrototype>element)
-      
+        let exportGenerator = new ContractGenerator(<ClassPrototype>element)
         this.exportDef = exportGenerator.generateExportDef();
       }
-
       if (!this.elementLookup.has(key) && this.isStoreClassPrototype(element)) {
         let storeGenerator: StorageGenerator = new StorageGenerator(<ClassPrototype>element);
-        this.exportIndent.joinIndents([storeGenerator.getBody()]);
+        this.stores.push(storeGenerator.storageDef);
       }
     }
   }
 }
 
-export function getAbiInfo(program: Program): AbiInfo {
-  return new AbiInfo(program);
+export function getContractInfo(program: Program): ContractInfo {
+  return new ContractInfo(program);
 }
