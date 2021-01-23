@@ -32,7 +32,7 @@ export class ContractGenerator {
     ["f64", "float64"],
     ["bool", "Bool"],
     ["boolean", "Bool"],
-    ["string", "string"]
+    ["string", "String"]
   ]);
 
   static defaultValMap: Map<string, string> = new Map([
@@ -102,6 +102,8 @@ export class ContractGenerator {
       paramDesc.codecType = this.getWrapperType(parameterType)
       paramDesc.defaultVal = this.getDefaultVal(parameterType);
       deployMethod.paramters.push(paramDesc);
+
+      // this.
     }
     let returnType = funcProto.functionTypeNode.returnType;
     let returnTypeAnalyzer = new TypeNodeAnalyzer(funcProto, <NamedTypeNode>returnType);

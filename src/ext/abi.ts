@@ -37,14 +37,12 @@ import {
 import {
   AstUtil,
   TypeNodeAnalyzer,
-  TypeNodeDesc,
-  AbiTypeEnum
+  TypeNodeDesc
 } from "./astutil";
 
 import {
   Strings,
-  AbiUtils,
-  Indent
+  AbiUtils
 } from "./primitiveutil";
 
 import {
@@ -174,18 +172,24 @@ class AbiDef {
   tables: Array<TableDef> = new Array<TableDef>();
 }
 
+export class TypeDef {
+  type: string = "";
+  index: i32 = 0;
+}
+
 export class ContractInfo {
 
   abiInfo: AbiDef = new AbiDef();
-  dispatch: string = '';
   program: Program;
   abiTypeLookup: Map<string, string> = AbiHelper.abiTypeLookup;
   typeAliasSet: Set<string> = new Set<string>();
   structsLookup: Map<string, StructDef> = new Map();
   elementLookup: Map<string, Element> = new Map();
-  exportDef: ExportDef = new ExportDef("");
   insertPointsLookup: Map<string, Array<InsertPoint>> = new Map<string, Array<InsertPoint>>();
+  exportDef: ExportDef = new ExportDef("");
   stores: StorageDef[] = new Array();
+  types: Map<string, TypeDef> = new Map();
+  countOfTypes: i32 = 1;
 
   constructor(program: Program) {
     this.program = program;
@@ -311,12 +315,9 @@ export class ContractInfo {
     }
   }
 
-
   /**
   *  Resolve ClassPrototype to dispatcher
   */
-  
-
   private getActionAbility(funcPrototype: FunctionPrototype): string {
     var statement = funcPrototype.declaration;
     var decoratorNode: DecoratorNode | null = AstUtil.getSpecifyDecorator(statement, DecoratorKind.MESSAGE);
@@ -379,6 +380,24 @@ export class ContractInfo {
   }
 
 
+  private pickUpAbiTypes(exportMethod: ExportMethod): void {
+    exportMethod.paramters.forEach(item => {
+      let originalType = item.originalType;
+      if (!this.types.has(originalType)) {
+        let typeDef = new TypeDef();
+        typeDef.index = this.countOfTypes++;
+        typeDef.type = originalType;
+      }
+      item.index = this.getIndexOfAbiTypes(originalType);
+    });
+  }
+
+  private getIndexOfAbiTypes(originalType: string): i32 {
+    let typeDef = this.types.get(originalType);
+    return typeDef == undefined ? 0 : typeDef.index;
+  }
+
+
   private resolve(): void {
     var serializeInserter: SerializeInserter = new SerializeInserter(this.program);
     var serializePoints = serializeInserter.getInsertPoints();
@@ -394,6 +413,28 @@ export class ContractInfo {
         let storeGenerator: StorageGenerator = new StorageGenerator(<ClassPrototype>element);
         this.stores.push(storeGenerator.storageDef);
       }
+    }
+
+    for (let index = 0; index < this.exportDef.deployers.length; index++) {
+      let exportDef: ExportMethod = this.exportDef.deployers[index];
+      this.pickUpAbiTypes(exportDef);
+    }
+
+    for (let index = 0; index < this.exportDef.messages.length; index++) {
+      let exportDef: ExportMethod = this.exportDef.messages[index];
+      this.pickUpAbiTypes(exportDef);
+    }
+
+    for (let index = 0; index < this.stores.length; index ++) {
+      let storeDef: StorageDef = this.stores[index];
+      storeDef.fields.forEach(item => {
+        let originalType = item.fieldType
+        if (!this.types.has(originalType)) {
+          let typeDef = new TypeDef();
+          typeDef.index = this.countOfTypes++;
+          typeDef.type = originalType;
+        }
+      })
     }
   }
 }

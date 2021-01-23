@@ -24,7 +24,7 @@
               "displayName": [
                 "{{originalType}}"
               ],
-              "type": 1
+              "type": {{index}}
             }
           }{{#if isMid}},{{/if}}
           {{/each}}
@@ -94,7 +94,7 @@
   "types": [
     {
       "def": {
-        "primitive": "bool"
+        "primitive": "{{originalType}}"
       }
     }
   ]

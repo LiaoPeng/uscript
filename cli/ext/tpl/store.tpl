@@ -7,16 +7,16 @@ class {{className}} {
   {{#each fields}}
   get {{fieldName}}(): {{fieldType}} {
     if (this.{{varName}} === null) {
-      const st = new Storage<{{codecType}}>("{{key}}");
+      const st = new Storage<{{fieldCodecType}}>("{{key}}");
       this.{{varName}} = st.load();
     }
     return this.{{varName}}!.unwrap();
   }
 
-  set {{fieldName}}(v: bool) {
-    this.{{varName}} = new {{codecType}}(v);
-    const st = new Storage<{{codecType}}>("{{key}}");
-    st.store(this.{{v}});
+  set {{fieldName}}(v: {{fieldType}}) {
+    this.{{varName}} = new {{fieldCodecType}}(v);
+    const st = new Storage<{{fieldCodecType}}>("{{key}}");
+    st.store(this.{{varName}});
   }
   {{/each}}
 }

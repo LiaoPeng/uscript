@@ -37,12 +37,9 @@ function outputCode(abiInfo, baseDir) {
 
   let storeTpl = fs.readFileSync(baseDir + "/cli/ext/tpl/store.tpl", { encoding: "utf8" });
   const store = Handlebars.compile(storeTpl)(abiInfo);
- 
   console.log("store", store)
-
   return output;
 }
-
 
 function outputAbi(abiInfo, baseDir) {
   let abiTpl = fs.readFileSync(baseDir + "/cli/ext/tpl/abi.tpl", { encoding: "utf8" });

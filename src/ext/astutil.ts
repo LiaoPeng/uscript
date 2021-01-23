@@ -229,22 +229,17 @@ export enum AbiTypeEnum {
     CLASS
 }
 
-interface TypeInfo {
-    getAbiTypeEnum(): void;
-    getAbiDeclareType(): string;
-    getArgs(): string[];
-    getSourceType(typeName: string): string;
-}
-
 export class TypeNodeDesc {
+    typeKind: AbiTypeEnum | undefined;
     abiType: AbiTypeEnum | undefined;
     typeName: string = "";
     codecType: string = "";
     originalType: string = "";
     defaultVal: string = "";
+    index: i32 = 0;
 }
 
-export class TypeNodeAnalyzer extends TypeNodeDesc{
+export class TypeNodeAnalyzer extends TypeNodeDesc {
 
     parent: Element;
     typeNode: NamedTypeNode;
