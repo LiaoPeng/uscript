@@ -1,94 +1,55 @@
 import { ParameterNode, NamedTypeNode, FieldDeclaration, TypeNode, NodeKind } from "../ast";
 import { FunctionPrototype, ClassPrototype, ElementKind, DeclaredElement, FieldPrototype } from "../program";
 import { TypeNodeAnalyzer, AstUtil, TypeNodeDesc } from "./astutil";
-import { ExportDef, ExportMethod, StorageDef, FieldDef } from "./abi";
-
-export class ContractGenerator {
+import { ContractExportDef, StorageDef, FieldDef } from "./abi";
+import { MethodDef, TypeUtil } from "./contract/base";
+export class ContractInterperter {
 
   private classPrototype: ClassPrototype;
   private className: string;
   private instanceName: string;
+  private exportDef: ContractExportDef;
 
   constructor(clzPrototype: ClassPrototype) {
     this.classPrototype = clzPrototype;
     let className: string = clzPrototype.name;
-    let instanceName: string = "_" + className;
     this.className = className;
-    this.instanceName = instanceName;
+    this.instanceName = "_" + this.className.toLowerCase();
+    this.exportDef = new ContractExportDef(this.className);
   }
 
-  static typeWrapperMap: Map<string, string> = new Map([
-    ["i8", "Int8"],
-    ["i16", "Int16"],
-    ["i32", "Int32"],
-    ["i64", "Int64"],
-    ["isize", "Int32"],
-    ["u8", "UInt8"],
-    ["u16", "UInt16"],
-    ["u32", "UInt32"],
-    ["u64", "UInt64"],
-    ["usize", "UInt32"],
-    ["f32", "float32"],
-    ["f64", "float64"],
-    ["bool", "Bool"],
-    ["boolean", "Bool"],
-    ["string", "String"]
-  ]);
-
-  static defaultValMap: Map<string, string> = new Map([
-    ["i8", "0"],
-    ["i16", "0"],
-    ["i32", "0"],
-    ["i64", "0"],
-    ["isize", "0"],
-    ["u8", "0"],
-    ["u16", "0"],
-    ["u32", "0"],
-    ["u64", "0"],
-    ["usize", "0"],
-    ["f32", "0"],
-    ["f64", "0"],
-    ["bool", "false"],
-    ["boolean", "false"],
-    ["string", "''"]
-  ]);
-
-
-  private getWrapperType(asType: string): string {
-    let type: string | undefined =  ContractGenerator.typeWrapperMap.get(asType);
-    return type == undefined ? "" : type;
-  }
-
-  private getDefaultVal(asType: string): string {
-    let type: string | undefined = ContractGenerator.typeWrapperMap.get(asType);
-    return type == undefined ? "" : type;
-  }
-
-  generateExportDef(): ExportDef {
-    let deployDef: ExportDef = new ExportDef(this.className);
+  getExportMethods(): ContractExportDef {
     if (this.classPrototype.instanceMembers) {
       for (let [_, instance] of this.classPrototype.instanceMembers) {
         if (instance && AstUtil.isDeployerFnPrototype(instance)) {
-          let method = this.generateMethod(this.instanceName, <FunctionPrototype>instance);
-          let defaultMthod = new ExportMethod();
-          defaultMthod.methodName = "default";
-          defaultMthod.paramters = [];
-          deployDef.deployers.push(method);
-          deployDef.deployers.push(defaultMthod);
-        } else if (instance && AstUtil.isActionFnPrototype(instance)){
-          let method = this.generateMethod(this.instanceName, <FunctionPrototype>instance);
-          deployDef.messages.push(method);
+          this.resolveDeployerFuncPrototype(<FunctionPrototype> instance);
+        } 
+
+        if (instance && AstUtil.isMessageFuncPrototype(instance)) {
+          let method = this.getMethodDesc(<FunctionPrototype>instance);
+          this.exportDef.messages.push(method);
         }
       }
     }
-    return deployDef;
+    return this.exportDef;
   }
 
-  generateMethod(instaceName: string, funcProto: FunctionPrototype): ExportMethod {
-    let deployMethod: ExportMethod = new ExportMethod();
+  private resolveDeployerFuncPrototype(funcPrototype: FunctionPrototype) {
+    let method = this.getMethodDesc(funcPrototype);
+    let defaultMthod = new MethodDef();
+    this.exportDef.deployers.push(method);
+    if (method.paramters.length !== 0) {
+      defaultMthod.methodName = "default";
+      defaultMthod.paramters = [];
+      this.exportDef.deployers.push(defaultMthod);
+    }
+  }
+
+  getMethodDesc(funcProto: FunctionPrototype): MethodDef {
+    let deployMethod: MethodDef = new MethodDef();
     let params = funcProto.functionTypeNode.parameters; // FunctionDeclaration parameter types
     deployMethod.methodName = funcProto.name;
-    
+
     for (let index = 0; index < params.length; index++) {
       let type: ParameterNode = params[index];
       let paramDesc: TypeNodeDesc = new TypeNodeDesc();
@@ -99,17 +60,15 @@ export class ContractGenerator {
       // console.log("parameterName", parameterName);
 
       paramDesc.originalType = parameterType;
-      paramDesc.codecType = this.getWrapperType(parameterType)
-      paramDesc.defaultVal = this.getDefaultVal(parameterType);
+      paramDesc.codecType = TypeUtil.getWrapperType(parameterType)
+      paramDesc.defaultVal = TypeUtil.getDefaultVal(parameterType);
       deployMethod.paramters.push(paramDesc);
-
-      // this.
     }
     let returnType = funcProto.functionTypeNode.returnType;
     let returnTypeAnalyzer = new TypeNodeAnalyzer(funcProto, <NamedTypeNode>returnType);
     let returnTypeDesc: TypeNodeDesc = new TypeNodeDesc();
     if (!returnTypeAnalyzer.isReturnVoid()) {
-      let wrapType = this.getWrapperType(returnTypeAnalyzer.typeName);
+      let wrapType = TypeUtil.getWrapperType(returnTypeAnalyzer.typeName);
       returnTypeDesc.codecType = wrapType;
       returnTypeDesc.originalType = returnTypeAnalyzer.typeName;
       deployMethod.hasReturnVal = true;
@@ -149,14 +108,16 @@ export class StorageGenerator {
       let fieldDef: FieldDef = new FieldDef();
       let typeNode = <NamedTypeNode>commonType;
       let varName = "_" + fieldPrototype.name;
-      let key: string = varName;
+      let key: string = this.classPrototype.name + fieldPrototype.name;
       var typeNodeAnalyzer: TypeNodeAnalyzer = new TypeNodeAnalyzer(this.classPrototype, typeNode);
       let typeName = typeNodeAnalyzer.typeName;
       fieldDef.varName = varName;
+      fieldDef.storeKey = key;
       fieldDef.fieldType = typeName;
       fieldDef.name = fieldPrototype.name;
-      let wrapType = ContractGenerator.typeWrapperMap.get(typeName);
+      let wrapType = TypeUtil.getWrapperType(typeName);
       fieldDef.fieldCodecType = wrapType;
+      fieldDef.storeKey = this.storageDef.className + fieldDef.name;
       this.storageDef.fields.push(fieldDef);
     }
   }

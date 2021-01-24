@@ -21,9 +21,8 @@ Handlebars.registerHelper("each", function (context, options) {
 Handlebars.registerHelper("selector", function (context, options) {
   let keyHash = blake2.createKeyedHash('blake2b', Buffer.from('key - up to 64 bytes for blake2b, 32 for blake2s'));
   keyHash.update(Buffer.from(context));
-  let digestBuffer = keyHash.digest();
-  console.log(`${digestBuffer.join(",")}`);
-  return `[TODO]`;
+  let hexStr = keyHash.digest("hex");
+  return `0x${hexStr.substr(0,8)}`;
 });
 
 /**

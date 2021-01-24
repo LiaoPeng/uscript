@@ -4,6 +4,10 @@ import {
 } from "./inserter";
 
 import {
+  MethodDef
+} from "./contract/base";
+
+import {
   Type,
   TypeKind,
 } from "../types";
@@ -46,8 +50,8 @@ import {
 } from "./primitiveutil";
 
 import {
-  ContractGenerator, StorageGenerator
-} from './generator';
+  ContractInterperter, StorageGenerator
+} from './annotation';
 
 class StructDef {
   name: string = '';
@@ -59,17 +63,10 @@ class StructDef {
   }
 }
 
-export class ExportMethod {
-  methodName: string = "";
-  paramters: TypeNodeDesc[] = new Array();
-  hasReturnVal: boolean = false;
-  returnType: TypeNodeDesc | undefined;
-}
-
-export class ExportDef {
+export class ContractExportDef {
   className: string;
-  deployers: ExportMethod[] = new Array();
-  messages: ExportMethod[] = new Array();
+  deployers: MethodDef[] = new Array();
+  messages: MethodDef[] = new Array();
 
   constructor(clzName: string) {
     this.className = clzName;
@@ -198,7 +195,7 @@ export class ContractInfo {
   structsLookup: Map<string, StructDef> = new Map();
   elementLookup: Map<string, Element> = new Map();
   insertPointsLookup: Map<string, Array<InsertPoint>> = new Map<string, Array<InsertPoint>>();
-  exportDef: ExportDef = new ExportDef("");
+  exportDef: ContractExportDef = new ContractExportDef("");
   stores: StorageDef[] = new Array();
   typeMap: Map<string, TypeDef> = new Map<string, TypeDef>();
   types: TypeDef[] = new Array();
@@ -393,8 +390,7 @@ export class ContractInfo {
     return false;
   }
 
-
-  private pickUpAbiTypes(exportMethod: ExportMethod): void {
+  private pickUpAbiTypes(exportMethod: MethodDef): void {
     exportMethod.paramters.forEach(item => {
       let originalType = item.originalType;
       if (!this.typeMap.has(originalType)) {
@@ -412,7 +408,6 @@ export class ContractInfo {
     return typeDef == undefined ? 0 : typeDef.index;
   }
 
-
   private resolve(): void {
     var serializeInserter: SerializeInserter = new SerializeInserter(this.program);
     var serializePoints = serializeInserter.getInsertPoints();
@@ -421,8 +416,8 @@ export class ContractInfo {
     for (let [key, element] of this.program.elementsByName) {
       // find class 
       if (!this.elementLookup.has(key) && this.isContractClassPrototype(element)) {
-        let exportGenerator = new ContractGenerator(<ClassPrototype>element)
-        this.exportDef = exportGenerator.generateExportDef();
+        let exportGenerator = new ContractInterperter(<ClassPrototype>element)
+        this.exportDef = exportGenerator.getExportMethods();
       }
       if (!this.elementLookup.has(key) && this.isStoreClassPrototype(element)) {
         let storeGenerator: StorageGenerator = new StorageGenerator(<ClassPrototype>element);
@@ -430,17 +425,18 @@ export class ContractInfo {
       }
     }
 
+
     for (let index = 0; index < this.exportDef.deployers.length; index++) {
-      let exportDef: ExportMethod = this.exportDef.deployers[index];
+      let exportDef: MethodDef = this.exportDef.deployers[index];
       this.pickUpAbiTypes(exportDef);
     }
 
     for (let index = 0; index < this.exportDef.messages.length; index++) {
-      let exportDef: ExportMethod = this.exportDef.messages[index];
+      let exportDef: MethodDef = this.exportDef.messages[index];
       this.pickUpAbiTypes(exportDef);
     }
 
-    for (let index = 0; index < this.stores.length; index ++) {
+    for (let index = 0; index < this.stores.length; index++) {
       let storeDef: StorageDef = this.stores[index];
       storeDef.fields.forEach(item => {
         let originalType = item.fieldType
@@ -454,15 +450,15 @@ export class ContractInfo {
         let cellLayoutDef: CellLayoutDef = new CellLayoutDef();
         item.layout = cellLayoutDef;
         if (typeDef) {
-          console.log(`typeDef`, typeDef.index)
           cellLayoutDef.cell.ty = typeDef.index;
+          cellLayoutDef.cell.key = item.storeKey;
         }
       })
     }
     for (let [key, value] of this.typeMap) {
       this.types.push(value);
     }
-    for (let index = 0; index < this.stores.length; index ++) {
+    for (let index = 0; index < this.stores.length; index++) {
       this.stores[index].fields.forEach(element => {
         this.fields.push(element);
       });

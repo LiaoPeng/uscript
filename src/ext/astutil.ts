@@ -170,7 +170,7 @@ export class AstUtil {
      * Check the element whether is action function prototype.
      * @param element 
      */
-    static isActionFnPrototype(element: Element): boolean {
+    static isMessageFuncPrototype(element: Element): boolean {
         if (element.kind == ElementKind.FUNCTION_PROTOTYPE) {
             let funcType = <FunctionPrototype>element;
             return AstUtil.haveSpecifyDecorator(funcType.declaration, DecoratorKind.MESSAGE);

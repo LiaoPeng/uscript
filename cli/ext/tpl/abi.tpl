@@ -30,7 +30,7 @@
           {{/each}}
         ],
         "docs": [
-          " Constructor that initializes the `bool` value to the given `init_value`."
+          ""
         ],
         "name": [
           "{{methodName}}"
@@ -83,7 +83,7 @@
         {
           "layout": {
             "cell": {
-              "key": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "key": "{{layout.cell.key}}",
               "ty": {{layout.cell.ty}}
             }
           },
@@ -98,7 +98,6 @@
     {
       "def": {
         "primitive": "{{type}}"
-        "index": {{index}}
       }
     }
     {{/each}}
