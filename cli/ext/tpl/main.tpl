@@ -29,10 +29,10 @@ export function call(): i32 {
   if (msg.isSelector({{methodName}}Selector)) {
     const fnParameters = new FnParameters(msg.data);
     {{#each paramters}}
-    let p{{index}} = fnParameters.get<{{codecType}}>();
+    let p{{_index}} = fnParameters.get<{{codecType}}>();
     {{/each}}
     {{#if hasReturnVal}}
-    let rs = _{{../exportDef.className}}.{{methodName}}();
+    let rs = _{{../exportDef.className}}.{{methodName}}({{#join paramters}}{{/join}});
     ReturnData.set<{{returnType.codecType}}>(new {{returnType.codecType}}(rs));
     {{/if}}
     {{#unless hasReturnVal}}

@@ -5,7 +5,7 @@ class {{className}} {
   {{/each}}
 
   {{#each fields}}
-  get {{fieldName}}(): {{fieldType}} {
+  get {{name}}(): {{fieldType}} {
     if (this.{{varName}} === null) {
       const st = new Storage<{{fieldCodecType}}>("{{key}}");
       this.{{varName}} = st.load();
@@ -13,7 +13,7 @@ class {{className}} {
     return this.{{varName}}!.unwrap();
   }
 
-  set {{fieldName}}(v: {{fieldType}}) {
+  set {{name}}(v: {{fieldType}}) {
     this.{{varName}} = new {{fieldCodecType}}(v);
     const st = new Storage<{{fieldCodecType}}>("{{key}}");
     st.store(this.{{varName}});

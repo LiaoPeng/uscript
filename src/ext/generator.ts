@@ -154,7 +154,7 @@ export class StorageGenerator {
       let typeName = typeNodeAnalyzer.typeName;
       fieldDef.varName = varName;
       fieldDef.fieldType = typeName;
-      fieldDef.fieldName = fieldPrototype.name;
+      fieldDef.name = fieldPrototype.name;
       let wrapType = ContractGenerator.typeWrapperMap.get(typeName);
       fieldDef.fieldCodecType = wrapType;
       this.storageDef.fields.push(fieldDef);

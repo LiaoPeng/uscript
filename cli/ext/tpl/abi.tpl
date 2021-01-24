@@ -2,12 +2,12 @@
   "metadataVersion": "0.1.0",
   "source": {
     "hash": "{{hash}}",
-    "language": "ink! 3.0.0-rc2",
-    "compiler": "rustc 1.49.0-nightly"
+    "language": "ask! 1.0.0-dev",
+    "compiler": "asc 1.49.0-nightly"
   },
   "contract": {
     "name": "{{exportDef.className}}",
-    "version": "0.1.0",
+    "version": "{{version}}",
     "authors": [
       "[your_name] <[your_email]>"
     ]
@@ -68,7 +68,7 @@
           "displayName": [
             "{{returnType.originalType}}"
           ],
-          "type": 1
+          "type": {{index}}
           {{/if}}
         },
         "selector": "0x1e5ca456"
@@ -79,23 +79,28 @@
   "storage": {
     "struct": {
       "fields": [
+        {{#each fields}}
         {
           "layout": {
             "cell": {
               "key": "0x0000000000000000000000000000000000000000000000000000000000000000",
-              "ty": 1
+              "ty": {{layout.cell.ty}}
             }
           },
-          "name": "value"
+          "name": "{{name}}"
         }
+        {{/each}}
       ]
     }
   },
   "types": [
+    {{#each types}}
     {
       "def": {
-        "primitive": "{{originalType}}"
+        "primitive": "{{type}}"
+        "index": {{index}}
       }
     }
+    {{/each}}
   ]
 }

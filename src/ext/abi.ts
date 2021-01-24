@@ -75,13 +75,26 @@ export class ExportDef {
     this.className = clzName;
   }
 }
+export class TypePair {
+  key: string = "";
+  ty: i32 = 0;
+}
+
+export class LayoutDef {
+}
+
+export class CellLayoutDef extends LayoutDef {
+  cell: TypePair = new TypePair();
+}
 
 export class FieldDef {
-  fieldName: string = "";
+  layout: LayoutDef = new LayoutDef();
+  name: string = "";
   fieldType: string = "";
   fieldCodecType: string | undefined = "";
   storeKey: string = "";
   varName: string = "";
+  path: string = "";
 }
 
 export class StorageDef {
@@ -171,7 +184,6 @@ class AbiDef {
   actions: Array<ActionDef> = new Array<ActionDef>();
   tables: Array<TableDef> = new Array<TableDef>();
 }
-
 export class TypeDef {
   type: string = "";
   index: i32 = 0;
@@ -188,8 +200,10 @@ export class ContractInfo {
   insertPointsLookup: Map<string, Array<InsertPoint>> = new Map<string, Array<InsertPoint>>();
   exportDef: ExportDef = new ExportDef("");
   stores: StorageDef[] = new Array();
-  types: Map<string, TypeDef> = new Map();
-  countOfTypes: i32 = 1;
+  typeMap: Map<string, TypeDef> = new Map<string, TypeDef>();
+  types: TypeDef[] = new Array();
+  typeIndex: i32 = 1;
+  fields: FieldDef[] = new Array();
 
   constructor(program: Program) {
     this.program = program;
@@ -383,17 +397,18 @@ export class ContractInfo {
   private pickUpAbiTypes(exportMethod: ExportMethod): void {
     exportMethod.paramters.forEach(item => {
       let originalType = item.originalType;
-      if (!this.types.has(originalType)) {
+      if (!this.typeMap.has(originalType)) {
         let typeDef = new TypeDef();
-        typeDef.index = this.countOfTypes++;
+        typeDef.index = this.typeIndex++;
         typeDef.type = originalType;
+        this.typeMap.set(originalType, typeDef);
       }
       item.index = this.getIndexOfAbiTypes(originalType);
     });
   }
 
   private getIndexOfAbiTypes(originalType: string): i32 {
-    let typeDef = this.types.get(originalType);
+    let typeDef = this.typeMap.get(originalType);
     return typeDef == undefined ? 0 : typeDef.index;
   }
 
@@ -429,12 +444,28 @@ export class ContractInfo {
       let storeDef: StorageDef = this.stores[index];
       storeDef.fields.forEach(item => {
         let originalType = item.fieldType
-        if (!this.types.has(originalType)) {
+        if (!this.typeMap.has(originalType)) {
           let typeDef = new TypeDef();
-          typeDef.index = this.countOfTypes++;
+          typeDef.index = this.typeIndex++;
           typeDef.type = originalType;
+          this.typeMap.set(originalType, typeDef);
+        }
+        let typeDef = this.typeMap.get(originalType);
+        let cellLayoutDef: CellLayoutDef = new CellLayoutDef();
+        item.layout = cellLayoutDef;
+        if (typeDef) {
+          console.log(`typeDef`, typeDef.index)
+          cellLayoutDef.cell.ty = typeDef.index;
         }
       })
+    }
+    for (let [key, value] of this.typeMap) {
+      this.types.push(value);
+    }
+    for (let index = 0; index < this.stores.length; index ++) {
+      this.stores[index].fields.forEach(element => {
+        this.fields.push(element);
+      });
     }
   }
 }
