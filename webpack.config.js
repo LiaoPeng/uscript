@@ -71,7 +71,8 @@ const bin = {
   entry: [ "./asc.js" ],
   externals: [
     "binaryen",
-    "assemblyscript"
+    "assemblyscript",
+    "blake2"
   ],
   node: {
     global: true
