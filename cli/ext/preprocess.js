@@ -52,11 +52,12 @@ Handlebars.registerHelper("selectorArr", function (context, options) {
 /**
  * Register the tag of join.
  */
-Handlebars.registerHelper("join", function (context, options, prefix) {
+Handlebars.registerHelper("joinParams", function (context, options) {
   var data = [];
   for (var i = 0, j = context.length; i < j; i++) {
-    data.push(prefix + i);
+    data.push("p" + i);
   }
+  console.log("data", JSON.stringify(data))
   return data.join(",");
 });
 

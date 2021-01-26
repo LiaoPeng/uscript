@@ -1,10 +1,4 @@
-function isSelectorEqual(l: u8[], r: u8[]): boolean {
-  if (l.length != r.length) return false;
-  for (let i = 0; i < l.length; i++) {
-    if (l[i] != r[i]) return false;
-  }
-  return true;
-}
+var msg: Msg = new Msg();
 
 export function deploy(): i32 {
   // const selector = arryToHexString(fnSelector);
@@ -23,7 +17,7 @@ export function deploy(): i32 {
 }
 
 export function call(): i32 {
-  const obj = new {{exportDef.className}}();
+  const _{{exportDef.contractName}} = new {{exportDef.className}}();
   {{#each exportDef.messages}}
   const {{methodName}}Selector: u8[] = {{#selectorArr methodName}}{{/selectorArr}};
   if (msg.isSelector({{methodName}}Selector)) {
@@ -32,12 +26,13 @@ export function call(): i32 {
     let p{{_index}} = fnParameters.get<{{codecType}}>();
     {{/each}}
     {{#if hasReturnVal}}
-    let rs = _{{../exportDef.className}}.{{methodName}}({{#join paramters}}{{/join}});
+    let rs = _{{../exportDef.contractName}}.{{methodName}}({{#joinParams paramters}}{{/joinParams}});
     ReturnData.set<{{returnType.codecType}}>(new {{returnType.codecType}}(rs));
     {{/if}}
     {{#unless hasReturnVal}}
-    _{{../exportDef.className}}.{{methodName}}();
+    _{{../exportDef.contractName}}.{{methodName}}({{#joinParams paramters}}{{/joinParams}});
     {{/unless}}
   }
   {{/each}}
+
 }

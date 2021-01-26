@@ -26,6 +26,14 @@ export class Strings {
         }
         return str;
     }
+
+    static lowerFirstCase(str: string): string {
+        if (str.length <= 1) {
+            return str.toLowerCase();
+        } else {
+            return str.substring(0, 1).toLowerCase() + str.substring(1, str.length);
+        }
+    }
 }
 
 export class AbiUtils {
