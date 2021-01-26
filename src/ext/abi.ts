@@ -66,12 +66,14 @@ class StructDef {
 export class ContractExportDef {
   className: string;
   contractName: string;
+  version: string;
   deployers: MethodDef[] = new Array();
   messages: MethodDef[] = new Array();
 
   constructor(clzName: string) {
     this.className = clzName;
     this.contractName = Strings.lowerFirstCase(this.className);
+    this.version = "1.0";
   }
 }
 export class TypePair {

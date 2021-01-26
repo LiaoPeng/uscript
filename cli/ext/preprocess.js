@@ -57,7 +57,6 @@ Handlebars.registerHelper("joinParams", function (context, options) {
   for (var i = 0, j = context.length; i < j; i++) {
     data.push("p" + i);
   }
-  console.log("data", JSON.stringify(data))
   return data.join(",");
 });
 

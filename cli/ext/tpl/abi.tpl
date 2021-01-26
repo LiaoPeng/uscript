@@ -7,7 +7,7 @@
   },
   "contract": {
     "name": "{{exportDef.className}}",
-    "version": "{{version}}",
+    "version": "{{exportDef.version}}",
     "authors": [
       "[your_name] <[your_email]>"
     ]
