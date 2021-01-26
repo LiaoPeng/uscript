@@ -83,7 +83,7 @@
         {
           "layout": {
             "cell": {
-              "key": "{{layout.cell.key}}",
+              "key": "{{#keySelector layout.cell.key}}{{/keySelector}}",
               "ty": {{layout.cell.ty}}
             }
           },

@@ -26,36 +26,55 @@ Handlebars.registerHelper("selector", function (context, options) {
 });
 
 /**
- * Register the tag of each.
+ * Register the tag of selector.
+ */
+Handlebars.registerHelper("keySelector", function (context, options) {
+  let keyHash = blake2.createKeyedHash('blake2b', Buffer.from('key - up to 64 bytes for blake2b, 32 for blake2s'));
+  keyHash.update(Buffer.from(context));
+  let hexStr = keyHash.digest("hex");
+  return `0x${hexStr}`;
+});
+
+/**
+ * Register the tag of selector.
+ */
+Handlebars.registerHelper("selectorArr", function (context, options) {
+  let keyHash = blake2.createKeyedHash('blake2b', Buffer.from('key - up to 64 bytes for blake2b, 32 for blake2s'));
+  keyHash.update(Buffer.from(context));
+  let hexStr = keyHash.digest("hex");
+  let selectorArr = new Array();
+  for (let index = 0; index < 4; index ++) {
+    selectorArr.push("0x" + hexStr.substring(index * 2, index * 2 + 2));
+  }
+  return `[${selectorArr.join(",")}]`;
+});
+
+/**
+ * Register the tag of join.
  */
 Handlebars.registerHelper("join", function (context, options, prefix) {
   var data = [];
   for (var i = 0, j = context.length; i < j; i++) {
-    data.push(prefix + index);
+    data.push(prefix + i);
   }
   return data.join(",");
 });
 
 // Write text (also fallback)
 function outputCode(abiInfo, baseDir) {
-  // console.log("===========")
-  // console.log(abiInfo.exportDef);
   let mainTpl = fs.readFileSync(baseDir + "/cli/ext/tpl/main.tpl", { encoding: "utf8" });
   const render = Handlebars.compile(mainTpl);
   const output = render(abiInfo);
-  console.log("output", output)
 
   let storeTpl = fs.readFileSync(baseDir + "/cli/ext/tpl/store.tpl", { encoding: "utf8" });
   const store = Handlebars.compile(storeTpl)(abiInfo);
-  console.log("store", store)
-  return output;
+  return  store + output;
 }
 
 function outputAbi(abiInfo, baseDir) {
   let abiTpl = fs.readFileSync(baseDir + "/cli/ext/tpl/abi.tpl", { encoding: "utf8" });
   const render = Handlebars.compile(abiTpl);
   const output = render(abiInfo);
-  console.log("output", output)
   return output;
 }
 

@@ -25,7 +25,7 @@ export function deploy(): i32 {
 export function call(): i32 {
   const obj = new {{exportDef.className}}();
   {{#each exportDef.messages}}
-  const {{methodName}}Selector: u8[] = {{#selector methodName}}{{/selector}};
+  const {{methodName}}Selector: u8[] = {{#selectorArr methodName}}{{/selectorArr}};
   if (msg.isSelector({{methodName}}Selector)) {
     const fnParameters = new FnParameters(msg.data);
     {{#each paramters}}
