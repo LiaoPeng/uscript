@@ -36,11 +36,15 @@ export class ContractInterperter {
 
   private resolveDeployerFuncPrototype(funcPrototype: FunctionPrototype) {
     let method = this.getMethodDesc(funcPrototype);
-    let defaultMthod = new MethodDef();
     this.exportDef.deployers.push(method);
+    let defaultMthod = new MethodDef();
     if (method.paramters.length !== 0) {
-      defaultMthod.methodName = "default";
       defaultMthod.paramters = [];
+      method.paramters.forEach(item => {
+        defaultMthod.defaultVals.push(item.defaultVal);
+      })
+      defaultMthod.ctrDefaultVals = defaultMthod.defaultVals.join(",");
+      defaultMthod.methodName = method.methodName;
       this.exportDef.deployers.push(defaultMthod);
     }
   }

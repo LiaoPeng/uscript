@@ -96,7 +96,6 @@ var assemblyscript;
         });
         dynrequire("../src/glue/js");
         assemblyscript = dynrequire("../src");
-        console.log('load assemblyscript');
       } catch (e_ts) {
         try { // `require("dist/asc.js")` in explicit browser tests
           assemblyscript = dynrequire("./assemblyscript");
@@ -868,12 +867,12 @@ exports.main = function main(argv, options, callback) {
 
     // Extension add START
     if (opts.sourceFile != null || !hasOutput) {
-      out = preprocess.outputCode(contractInfo, path.resolve(baseDir));
+      out = preprocess.outputCode(contractInfo, __dirname);
       writeFile(opts.sourceFile, process.sourceText + out, baseDir);
     }
 
     if (opts.sourceFile != null || !hasOutput) {
-      out = preprocess.outputAbi(contractInfo, path.resolve(baseDir));
+      out = preprocess.outputAbi(contractInfo, __dirname);
       writeFile(opts.abiFile, out, baseDir);
     }
 

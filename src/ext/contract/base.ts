@@ -5,6 +5,8 @@ export class MethodDef {
   paramters: TypeNodeDesc[] = new Array();
   hasReturnVal: boolean = false;
   returnType: TypeNodeDesc | undefined;
+  defaultVals: string[] = new Array();
+  ctrDefaultVals: string = "";
 }
 
 export class TypeUtil {
@@ -51,7 +53,7 @@ export class TypeUtil {
   }
 
   static getDefaultVal(asType: string): string {
-    let type: string | undefined = TypeUtil.typeWrapperMap.get(asType);
+    let type: string | undefined = TypeUtil.defaultValMap.get(asType);
     return type == undefined ? "" : type;
   }
 }
