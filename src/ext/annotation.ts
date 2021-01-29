@@ -42,7 +42,7 @@ export class ContractInterperter {
       defaultMthod.paramters = [];
       method.paramters.forEach(item => {
         defaultMthod.defaultVals.push(item.defaultVal);
-      })
+      });
       defaultMthod.ctrDefaultVals = defaultMthod.defaultVals.join(",");
       defaultMthod.methodName = method.methodName;
       this.exportDef.deployers.push(defaultMthod);
@@ -60,11 +60,11 @@ export class ContractInterperter {
 
       let parameterType = type.type.range.toString();
       let parameterName = type.name.range.toString();
-      // console.log("parameterType", parameterType);
-      // console.log("parameterName", parameterName);
+      console.log("parameterType", parameterType);
+      console.log("parameterName", parameterName);
 
       paramDesc.originalType = parameterType;
-      paramDesc.codecType = TypeUtil.getWrapperType(parameterType)
+      paramDesc.codecType = TypeUtil.getWrapperType(parameterType);
       paramDesc.defaultVal = TypeUtil.getDefaultVal(parameterType);
       deployMethod.paramters.push(paramDesc);
     }
