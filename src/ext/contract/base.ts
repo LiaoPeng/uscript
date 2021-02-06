@@ -1,8 +1,9 @@
-import { FieldDeclaration, NamedTypeNode, NodeKind, ParameterNode, TypeNode } from "../../ast";
-import { ClassPrototype, FieldPrototype, FunctionPrototype, Program } from "../../program";
-import { ContractIntperter, StorageInterpreter } from "../annotation";
-import { ElementUtil, NamedTypeNodeDef } from "../astutil";
-import { CellLayoutDef, LayoutDef } from "./storage";
+import { FieldDeclaration, ImportStatement, NamedTypeNode, NodeKind, ParameterNode, Source, SourceKind, TypeDeclaration, TypeNode } from "../../ast";
+import { Element, ElementKind, FieldPrototype, FunctionPrototype, TypeDefinition } from "../../program";
+import { AstUtil } from "../astutil";
+import { Collections } from "../collectionutil";
+import { AbiHelper } from "../contract";
+import { LayoutDef } from "./storage";
 
 /**
  * The parameter type enum
@@ -141,88 +142,237 @@ export class TypeUtil {
     return type == undefined ? "" : type;
   }
 }
+export class ImportSourceDef {
+  private entrySources: Source[] = new Array();
+  private importedElement: Set<String> = new Set();
+  unimports: Set<String> = new Set();
 
-export class ContractProgram {
-  program: Program;
-  contract: ContractIntperter | null;
-  storages: StorageInterpreter[] = new Array();
-  types: NamedTypeNodeDef[] = new Array();
-  fields: FieldDef[] = new Array();
-  private typeNodeMap: Map<string, NamedTypeNodeDef> = new Map<string, NamedTypeNodeDef>();
-  private lastTypeSeq: i32 = 0;
-  
-
-  constructor(program: Program) {
-    this.program = program;
-    this.contract = null;
-    this.resolve();
-  }
-
-  private resolve(): void {
-    for (let [key, element] of this.program.elementsByName) {
-      // find class 
-      if (ElementUtil.isContractClassPrototype(element)) {
-        this.contract = new ContractIntperter(<ClassPrototype>element);
+  constructor(sources: Source[]) {
+    sources.forEach(element => {
+      if (element.sourceKind == SourceKind.USER_ENTRY) {
+        this.entrySources.push(element);
+        this.resolveSource(element);
       }
-      if (ElementUtil.isStoreClassPrototype(element)) {
-        this.storages.push(new StorageInterpreter(<ClassPrototype>element));
-      }
-    }
-    this.resolveTypes();
-  }
-
-  private getIndexNum(): i32 {
-    return ++this.lastTypeSeq;
-  }
-
-  private retriveTypesAndSetIndex(exportMethod: FunctionDef): void {
-    exportMethod.parameters.forEach(item => {
-      let originalType = item.originalType;
-      if (!this.typeNodeMap.has(originalType)) {
-        item.index = this.getIndexNum();
-        this.typeNodeMap.set(originalType, item);
-      }
-      item.index = this.getIndexOfAbiTypes(originalType);
     });
   }
 
-  private getIndexOfAbiTypes(originalType: string): i32 {
-    let typeDef = this.typeNodeMap.get(originalType);
-    return typeDef == undefined ? 0 : typeDef.index;
+  private resolveSource(source: Source): void {
+    source.statements.forEach(statement => {
+      if (statement.kind == NodeKind.IMPORT) {
+        let importStatement = <ImportStatement> statement;
+        if (importStatement.declarations) {
+          importStatement.declarations.forEach(declaration => {
+            console.log(declaration.range.toString());
+            this.importedElement.add(declaration.range.toString());
+          });
+        }
+      }
+    });
   }
 
-  private resolveTypes(): void {
-    if (this.contract) {
-      for (let index = 0; index < this.contract.cntrFuncDefs.length; index++) {
-        let exportDef: FunctionDef = this.contract.cntrFuncDefs[index];
-        this.retriveTypesAndSetIndex(exportDef);
-      }
+  addImportsElement(name: String): void {
+    if (!this.importedElement.has(name)) {
+      this.unimports.add(name);
+    }
+  }
+}
 
-      for (let index = 0; index < this.contract.msgFuncDefs.length; index++) {
-        let exportDef: FunctionDef = this.contract.msgFuncDefs[index];
-        this.retriveTypesAndSetIndex(exportDef);
+
+/**
+ * Type node description
+ * 
+ * How to describe a type, 
+ * basic type, type name and type
+ * composite type 
+ * array and map
+ * 
+ * method(name: string);
+ * method(name: string, car: Car);
+ */
+export class NamedTypeNodeDef {
+  protected parent: Element;
+  protected typeNode: NamedTypeNode;
+  typeKind: TypeEnum | undefined;
+  typeArguments: NamedTypeNodeDef[] = new Array();
+  typeName: string = "";
+  codecType: string = "";
+  originalType: string = "";
+  defaultVal: string = "";
+  index: i32 = 0;
+
+  constructor(parent: Element, typeNode: NamedTypeNode) {
+    this.parent = parent;
+    this.typeNode = typeNode;
+    console.log("type node kind", NodeKind[this.typeNode.kind]);
+    // Here various clz[]'s type name is [], not clz.
+    this.typeName = this.typeNode.name.range.toString();
+    console.log("typename", this.typeName);
+    this.getArgs();
+  }
+
+  getDeclareType(): string {
+    return this.typeNode.range.toString();
+  }
+
+  isReturnVoid(): boolean {
+    return this.typeName == "void";
+  }
+
+  get typeEnum(): TypeEnum {
+    var typeName = this.typeName;
+    if (AstUtil.isString(typeName)) {
+      return TypeEnum.STRING;
+    }
+    if (AstUtil.isArrayType(typeName)) {
+      return TypeEnum.ARRAY;
+    }
+    if (AstUtil.isMapType(typeName)) {
+      return TypeEnum.MAP;
+    }
+    var type = this.findElement(typeName);
+
+    if (type) {
+      if (type.kind == ElementKind.TYPEDEFINITION) {
+        let typeDefine = <TypeDefinition>type;
+        let declaration = <TypeDeclaration>typeDefine.declaration;
+        let _typeNode = <NamedTypeNode>declaration.type;
+        let name = _typeNode.name.range.toString();
+        if (AbiHelper.abiTypeLookup.get(name) && name != "Asset") {
+          return TypeEnum.NUMBER;
+        }
+      }
+      if (type.kind == ElementKind.CLASS_PROTOTYPE) {
+        return TypeEnum.CLASS;
       }
     }
-  
-    for (let index = 0; index < this.storages.length; index++) {
-      let storeDef: StorageInterpreter = this.storages[index];
-      storeDef.fields.forEach(item => {
-        let originalType = item.fieldType;
-        if (!this.typeNodeMap.has(originalType) && item.type) {
-          item.type.index = this.getIndexNum();
-          this.typeNodeMap.set(originalType, item.type);
-        }
-        let typeDef = this.typeNodeMap.get(originalType);
-        let cellLayoutDef: CellLayoutDef = new CellLayoutDef();
-        item.layout = cellLayoutDef;
-        if (typeDef) {
-          cellLayoutDef.cell.ty = typeDef.index;
-          cellLayoutDef.cell.key = item.storeKey;
-        }
-      });
+    return TypeEnum.NUMBER;
+  }
+
+  isArray(): boolean {
+    return this.typeEnum == TypeEnum.ARRAY;
+  }
+
+  getArrayArgAbiTypeEnum(): TypeEnum {
+    var typeName = this.getArgs()[0];
+    if (AstUtil.isString(typeName)) {
+      return TypeEnum.STRING;
     }
-    for (let [key, value] of this.typeNodeMap) {
-      this.types.push(value);
+    var type = this.findSourceAsElement(typeName);
+    if (type != null && type.kind == ElementKind.CLASS_PROTOTYPE) {
+      return TypeEnum.CLASS;
     }
+    return TypeEnum.NUMBER;
+  }
+
+  isPrimaryType(): boolean {
+    if (this.typeEnum == TypeEnum.NUMBER) {
+      return this.findSourceAsTypeName(this.typeName) == "u64";
+    }
+    return false;
+  }
+
+  getArrayArg(): string {
+    if (this.typeNode.typeArguments) {
+      return this.typeNode.typeArguments[0].range.toString();
+    }
+    throw new Error(`The typenode is not array:${this.typeName}.`
+      + ` Location in ${AstUtil.location(this.typeNode.range)}`);
+  }
+
+  getAbiDeclareType(): string {
+    var abiType = this.typeEnum;
+    var typeName = this.typeNode.name.range.toString();
+    switch (abiType) {
+      case TypeEnum.STRING: {
+        return "string";
+      }
+      case TypeEnum.NUMBER:
+      case TypeEnum.CLASS: {
+        return typeName;
+      }
+      case TypeEnum.ARRAY: {
+        return `${this.getArgs()[0]}[]`;
+      }
+      case TypeEnum.MAP: {
+        return `${this.getArgs().join(",")}{}`;
+      }
+      default: {
+        return typeName;
+      }
+    }
+  }
+
+  private getArgs(): string[] {
+    var args = this.typeNode.typeArguments;
+    var argType = new Array<string>();
+    if (args) {
+      for (let arg of args) {
+        console.log(`arg node type kind`, NodeKind[arg.kind]);
+        if (arg.kind == NodeKind.NAMEDTYPE) {
+          let typeAnalyzer: NamedTypeNodeDef = new NamedTypeNodeDef(this.parent, <NamedTypeNode>arg);
+          this.typeArguments.push(typeAnalyzer);
+        }
+        argType.push(arg.range.toString());
+      }
+    }
+    return argType;
+  }
+
+  getAsTypes(): string[] {
+    var args = this.getArgs();
+    if (!Collections.isEmptyArray(args)) {
+      return args;
+    }
+    return [this.typeName];
+  }
+
+  /**
+  * the typename maybe global scope or local scope.
+  * So search the local firtst, then search the global scope.
+  *
+  * @param typeName typename without type arguments
+  */
+  findElement(typeName: string): Element | null {
+    return this.parent.lookup(typeName);
+  }
+
+  /**
+   * Get the type {@type Type} by the type name
+   * @param asTypeName the AssemblyScript type name
+   */
+  private findSourceAsElement(asTypeName: string): Element | null {
+    var sourceTypeName = this.findSourceAsTypeName(asTypeName);
+    var sourceType: Element | null = this.parent.lookup(sourceTypeName);
+    return sourceType;
+  }
+
+  /**
+   * Find the source type name,
+   * eg: declare type account_name = u64;
+   *     declare type account_name_alias = account_name;
+   *     findSourceAsTypeName("account_name_alias") return "account_name";
+   */
+  private findSourceAsTypeName(typeName: string): string {
+    var element = this.parent.lookup(typeName);
+    if (element && element.kind == ElementKind.TYPEDEFINITION) {
+      let typeDefine = <TypeDefinition>element;
+      let aliasTypeName = typeDefine.typeNode.range.toString();
+      return this.findSourceAsTypeName(aliasTypeName);
+    }
+    return typeName;
+  }
+
+  findSourceAbiType(typeName: string): string {
+    var abiType: string | null = AbiHelper.abiTypeLookup.get(typeName) || null;
+    if (abiType) {
+      return abiType;
+    }
+    var element = this.parent.lookup(typeName);
+    if (element && element.kind == ElementKind.TYPEDEFINITION) {
+      let typeDefine = <TypeDefinition>element;
+      let aliasTypeName = typeDefine.typeNode.range.toString();
+      return this.findSourceAbiType(aliasTypeName);
+    }
+    return typeName;
   }
 }

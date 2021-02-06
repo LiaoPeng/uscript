@@ -2680,6 +2680,7 @@ export namespace DecoratorFlags {
       /* Extension add START */
       case DecoratorKind.CONTRACT: return DecoratorFlags.CONTRACT;
       case DecoratorKind.DEPLOYER: return DecoratorFlags.DEPLOYER;
+      case DecoratorKind.CONSTRUCTOR: return DecoratorFlags.CONSTRUCTOR;
       case DecoratorKind.STORAGE: return DecoratorFlags.STORAGE;
       /* Extension add END */
       default: return DecoratorFlags.NONE;

@@ -3,20 +3,12 @@ import {
 } from "./inserter";
 
 import {
-  TypeEnum,
-  FunctionDef,
-  ContractProgram,
-  TypeUtil
-} from "./contract/base";
-
-import {
   ElementKind,
   Element,
   ClassPrototype,
   FunctionPrototype,
   Program,
   VariableLikeElement,
-  FieldPrototype,
 } from "../program";
 
 import {
@@ -45,6 +37,8 @@ import {
   Strings,
   AbiUtils
 } from "./primitiveutil";
+import { ProgramAnalyzar } from "./analyzer";
+import { ContractProgram } from "./annotation";
 class StructDef {
   name: string = '';
   fields: Array<Object> = new Array<Object>();
@@ -55,19 +49,6 @@ class StructDef {
   }
 }
 
-export class ContractExportDef {
-  className: string;
-  contractName: string;
-  version: string;
-  deployers: FunctionDef[] = new Array();
-  messages: FunctionDef[] = new Array();
-
-  constructor(clzName: string) {
-    this.className = clzName;
-    this.version = "1.0";
-    this.contractName = this.className;
-  }
-}
 
 class AbiAliasDef {
   new_type_name: string;
@@ -333,5 +314,6 @@ export class ContractInfo {
 }
 
 export function getContractInfo(program: Program): ContractProgram {
+  new ProgramAnalyzar(program);
   return new ContractProgram(program);
 }
