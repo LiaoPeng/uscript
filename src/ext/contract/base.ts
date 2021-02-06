@@ -1,8 +1,8 @@
-import { ClassPrototype, FunctionPrototype, Program } from "../../program";
-import { ClassInterperter, ContractIntperter, StorageInterpreter } from "../annotation";
+import { FieldDeclaration, NamedTypeNode, NodeKind, ParameterNode, TypeNode } from "../../ast";
+import { ClassPrototype, FieldPrototype, FunctionPrototype, Program } from "../../program";
+import { ContractIntperter, StorageInterpreter } from "../annotation";
 import { ElementUtil, NamedTypeNodeDef } from "../astutil";
-import { FieldDef } from "../contract";
-import { CellLayoutDef } from "./storage";
+import { CellLayoutDef, LayoutDef } from "./storage";
 
 /**
  * The parameter type enum
@@ -16,8 +16,41 @@ export enum TypeEnum {
   MAP,
   CLASS
 }
+export class FieldDef {
+  protected fieldPrototype: FieldPrototype;
+  layout: LayoutDef = new LayoutDef();
+  name: string = "";
+  type: NamedTypeNodeDef | null = null;
+  fieldType: string = "";
+  fieldCodecType: string | undefined = "";
+  storeKey: string = "";
+  varName: string = "";
+  path: string = "";
+
+  constructor(field: FieldPrototype) {
+    this.fieldPrototype = field;
+    this.name = field.name;
+    this.varName = "_" + this.name;
+    this.storeKey = this.fieldPrototype.parent.name + this.name;
+    this.resolveField();
+  }
+
+  private resolveField(): void {
+    let fieldDeclaration: FieldDeclaration = <FieldDeclaration>this.fieldPrototype.declaration;
+    let commonType: TypeNode | null = fieldDeclaration.type;
+    if (commonType && commonType.kind == NodeKind.NAMEDTYPE) {
+      let typeNode = <NamedTypeNode>commonType;
+      this.type = new NamedTypeNodeDef(this.fieldPrototype, typeNode);
+      let typeName = this.type.typeName;
+      this.fieldType = typeName;
+      let wrapType = TypeUtil.getWrapperType(typeName);
+      this.fieldCodecType = wrapType;
+    }
+  }
+}
+
 export class FunctionDef {
-  private functionPrototype: FunctionPrototype;
+  private funcProto: FunctionPrototype;
   methodName: string = "";
   parameters: NamedTypeNodeDef[] = new Array();
   hasReturnVal: boolean = false;
@@ -26,7 +59,37 @@ export class FunctionDef {
   ctrDefaultVals: string = "";
 
   constructor(funcPrototype: FunctionPrototype) {
-    this.functionPrototype = funcPrototype;
+    this.funcProto = funcPrototype;
+    this.methodName = this.funcProto.name;
+    this.resolve();
+  }
+
+  resolve(): void {
+    let params = this.funcProto.functionTypeNode.parameters; // FunctionDeclaration parameter types
+
+    for (let index = 0; index < params.length; index++) {
+      let type: ParameterNode = params[index];
+      let paramDesc: NamedTypeNodeDef = new NamedTypeNodeDef(this.funcProto, <NamedTypeNode>type.type);
+
+      let parameterType = type.type.range.toString();
+      let parameterName = type.name.range.toString();
+      console.log("parameterType", parameterType);
+      console.log("parameterName", parameterName);
+
+      paramDesc.originalType = parameterType;
+      paramDesc.codecType = TypeUtil.getWrapperType(parameterType);
+      paramDesc.defaultVal = TypeUtil.getDefaultVal(parameterType);
+      this.parameters.push(paramDesc);
+    }
+    let returnType = this.funcProto.functionTypeNode.returnType;
+    let returnTypeDesc = new NamedTypeNodeDef(this.funcProto, <NamedTypeNode>returnType);
+    if (!returnTypeDesc.isReturnVoid()) {
+      let wrapType = TypeUtil.getWrapperType(returnTypeDesc.typeName);
+      returnTypeDesc.codecType = wrapType;
+      returnTypeDesc.originalType = returnTypeDesc.typeName;
+      this.hasReturnVal = true;
+    }
+    this.returnType = returnTypeDesc;
   }
 }
 

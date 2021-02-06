@@ -70,27 +70,26 @@ Handlebars.registerHelper("equal", function (v1, v2, options) {
   }
 });
 
-function removeSourceCode(sourceText, range) {
+function removeSourceCode(sourceText, range, store) {
   let prefix = sourceText.substring(0, range.start);
   let suffix = sourceText.substring(range.end, sourceText.length);
-  return prefix + suffix;
+  return prefix + store + suffix;
 }
 
 // Write text (also fallback)
 function outputCode(sourceText, abiInfo) {
   let mainTpl = fs.readFileSync(__dirname + "/tpl/main.tpl", { encoding: "utf8" });
   const render = Handlebars.compile(mainTpl);
-  const output = render(abiInfo);
-
+  const exportMain = render(abiInfo);
   let storeTpl = fs.readFileSync(__dirname + "/tpl/store.tpl", { encoding: "utf8" });
-  const store = Handlebars.compile(storeTpl)(abiInfo);
-
+  
   for (let index = 0; index < abiInfo.storages.length; index ++) {
-    sourceText = removeSourceCode(sourceText, abiInfo.storages[index].range);
+    let store = Handlebars.compile(storeTpl)(abiInfo);
+    sourceText = removeSourceCode(sourceText, abiInfo.storages[index].range, store);
   }
-  let pro = sourceText + store + output;
-  console.log("program", pro);
-  return sourceText + store + output;
+  // let pro = sourceText  + exportMain;
+  // console.log("program", pro);
+  return sourceText + exportMain;
 }
 
 function outputAbi(abiInfo) {

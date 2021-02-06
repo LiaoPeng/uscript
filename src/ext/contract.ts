@@ -68,50 +68,6 @@ export class ContractExportDef {
     this.contractName = this.className;
   }
 }
-export class TypePair {
-  key: string = "";
-  ty: i32 = 0;
-}
-
-export class LayoutDef {
-}
-
-export class CellLayoutDef extends LayoutDef {
-  cell: TypePair = new TypePair();
-}
-
-export class FieldDef {
-  protected fieldPrototype: FieldPrototype;
-  layout: LayoutDef = new LayoutDef();
-  name: string = "";
-  type: NamedTypeNodeDef | null = null;
-  fieldType: string = "";
-  fieldCodecType: string | undefined = "";
-  storeKey: string = "";
-  varName: string = "";
-  path: string = "";
-
-  constructor(field: FieldPrototype) {
-    this.fieldPrototype = field;
-    this.name = field.name;
-    this.varName = "_"  + this.name;
-    this.storeKey = this.fieldPrototype.parent.name + this.name;
-    this.resolveField();
-  }
-
-  private resolveField(): void {
-    let fieldDeclaration: FieldDeclaration = <FieldDeclaration>this.fieldPrototype.declaration;
-    let commonType: TypeNode | null = fieldDeclaration.type;
-    if (commonType && commonType.kind == NodeKind.NAMEDTYPE) {
-      let typeNode = <NamedTypeNode>commonType;
-      this.type = new NamedTypeNodeDef(this.fieldPrototype, typeNode);
-      let typeName = this.type.typeName;     
-      this.fieldType = typeName;
-      let wrapType = TypeUtil.getWrapperType(typeName);
-      this.fieldCodecType = wrapType;
-    }
-  }
-}
 
 class AbiAliasDef {
   new_type_name: string;
