@@ -59,15 +59,38 @@ Handlebars.registerHelper("joinParams", function (context, options) {
   return data.join(",");
 });
 
+/**
+ * Register the tag of equal
+ */
+Handlebars.registerHelper("equal", function (v1, v2, options) {
+  if (v1 == v2) {
+    return options.fn(this);
+  } else {
+    return options.inverse(this);
+  }
+});
+
+function removeSourceCode(sourceText, range) {
+  let prefix = sourceText.substring(0, range.start);
+  let suffix = sourceText.substring(range.end, sourceText.length);
+  return prefix + suffix;
+}
+
 // Write text (also fallback)
-function outputCode(abiInfo) {
+function outputCode(sourceText, abiInfo) {
   let mainTpl = fs.readFileSync(__dirname + "/tpl/main.tpl", { encoding: "utf8" });
   const render = Handlebars.compile(mainTpl);
   const output = render(abiInfo);
 
   let storeTpl = fs.readFileSync(__dirname + "/tpl/store.tpl", { encoding: "utf8" });
   const store = Handlebars.compile(storeTpl)(abiInfo);
-  return  store + output;
+
+  for (let index = 0; index < abiInfo.storages.length; index ++) {
+    sourceText = removeSourceCode(sourceText, abiInfo.storages[index].range);
+  }
+  let pro = sourceText + store + output;
+  console.log("program", pro);
+  return sourceText + store + output;
 }
 
 function outputAbi(abiInfo) {

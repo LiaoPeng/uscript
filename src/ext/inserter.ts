@@ -1,6 +1,6 @@
 import {
   AbiHelper
-} from "./abi";
+} from "./contract";
 
 import {
   ClassDeclaration,

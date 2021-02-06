@@ -1879,7 +1879,7 @@ export class Program extends DiagnosticEmitter {
     var name = declaration.name.text;
     var isStatic = declaration.is(CommonFlags.STATIC);
     // Extension add
-    var acceptedFlags = DecoratorFlags.INLINE | DecoratorFlags.UNSAFE | DecoratorFlags.DEPLOYER;
+    var acceptedFlags = DecoratorFlags.INLINE | DecoratorFlags.UNSAFE | DecoratorFlags.DEPLOYER | DecoratorFlags.CONSTRUCTOR;
     if (!declaration.is(CommonFlags.GENERIC)) {
       acceptedFlags |= DecoratorFlags.OPERATOR_BINARY
                     |  DecoratorFlags.OPERATOR_PREFIX
@@ -2656,6 +2656,7 @@ export enum DecoratorFlags {
   CONTRACT = 1 << 14,
   DATABASE = 1 << 15,
   PRIMARYID = 1 << 16,
+  CONSTRUCTOR = 1 << 17
   /* Extension add END */
 }
 

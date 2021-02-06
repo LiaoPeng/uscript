@@ -1,62 +1,49 @@
-import { ParameterNode, NamedTypeNode, FieldDeclaration, TypeNode, NodeKind } from "../ast";
+import { ParameterNode, NamedTypeNode, Source } from "../ast";
 import { FunctionPrototype, ClassPrototype, ElementKind, DeclaredElement, FieldPrototype } from "../program";
-import { TypeNodeAnalyzer, AstUtil, TypeNodeDesc } from "./astutil";
-import { ContractExportDef, StorageDef, FieldDef } from "./abi";
-import { MethodDef, TypeUtil } from "./contract/base";
-export class ContractInterperter {
+import { Range } from "../tokenizer";
+import { NamedTypeNodeDef, ElementUtil } from "./astutil";
+import { FieldDef } from "./contract";
+import { FunctionDef, TypeUtil } from "./contract/base";
+import { Strings } from "./primitiveutil";
 
-  private classPrototype: ClassPrototype;
-  private className: string;
-  private instanceName: string;
-  private exportDef: ContractExportDef;
-
+export class ClassInterperter {
+  protected classPrototype: ClassPrototype;
+  className: string;
+  instanceName: string;
+  range: Range;
+  
   constructor(clzPrototype: ClassPrototype) {
     this.classPrototype = clzPrototype;
-    let className: string = clzPrototype.name;
-    this.className = className;
+    this.className = clzPrototype.name;
     this.instanceName = "_" + this.className.toLowerCase();
-    this.exportDef = new ContractExportDef(this.className);
+    this.range = this.classPrototype.declaration.range;
+    // this.source.range.atStart
   }
 
-  getExportMethods(): ContractExportDef {
-    if (this.classPrototype.instanceMembers) {
-      for (let [_, instance] of this.classPrototype.instanceMembers) {
-        if (instance && AstUtil.isDeployerFnPrototype(instance)) {
-          this.resolveDeployerFuncPrototype(<FunctionPrototype> instance);
-        } 
 
-        if (instance && AstUtil.isMessageFuncPrototype(instance)) {
-          let method = this.getMethodDesc(<FunctionPrototype>instance);
-          this.exportDef.messages.push(method);
-        }
-      }
-    }
-    return this.exportDef;
+  resolveCntrFuncPrototype(funcPrototype: FunctionPrototype): void {
+    let method = this.getFunctionDesc(funcPrototype);
+    // this.exportDef.deployers.push(method);
+    // let defaultMthod = new FunctionDef();
+    // if (method.paramters.length !== 0) {
+    //   defaultMthod.paramters = [];
+    //   method.paramters.forEach(item => {
+    //     defaultMthod.defaultVals.push(item.defaultVal);
+    //   });
+    //   defaultMthod.ctrDefaultVals = defaultMthod.defaultVals.join(",");
+    //   defaultMthod.methodName = method.methodName;
+    //   this.exportDef.deployers.push(defaultMthod);
+    // }
   }
 
-  private resolveDeployerFuncPrototype(funcPrototype: FunctionPrototype) {
-    let method = this.getMethodDesc(funcPrototype);
-    this.exportDef.deployers.push(method);
-    let defaultMthod = new MethodDef();
-    if (method.paramters.length !== 0) {
-      defaultMthod.paramters = [];
-      method.paramters.forEach(item => {
-        defaultMthod.defaultVals.push(item.defaultVal);
-      });
-      defaultMthod.ctrDefaultVals = defaultMthod.defaultVals.join(",");
-      defaultMthod.methodName = method.methodName;
-      this.exportDef.deployers.push(defaultMthod);
-    }
-  }
-
-  getMethodDesc(funcProto: FunctionPrototype): MethodDef {
-    let deployMethod: MethodDef = new MethodDef();
+  getFunctionDesc(funcProto: FunctionPrototype): FunctionDef {
+    let functionDef: FunctionDef = new FunctionDef(funcProto);
     let params = funcProto.functionTypeNode.parameters; // FunctionDeclaration parameter types
-    deployMethod.methodName = funcProto.name;
+    functionDef.methodName = funcProto.name;
 
     for (let index = 0; index < params.length; index++) {
       let type: ParameterNode = params[index];
-      let paramDesc: TypeNodeDesc = new TypeNodeDesc();
+      let paramDesc: NamedTypeNodeDef = new NamedTypeNodeDef(funcProto, <NamedTypeNode>type.type);
 
       let parameterType = type.type.range.toString();
       let parameterName = type.name.range.toString();
@@ -66,63 +53,69 @@ export class ContractInterperter {
       paramDesc.originalType = parameterType;
       paramDesc.codecType = TypeUtil.getWrapperType(parameterType);
       paramDesc.defaultVal = TypeUtil.getDefaultVal(parameterType);
-      deployMethod.paramters.push(paramDesc);
+      functionDef.parameters.push(paramDesc);
     }
     let returnType = funcProto.functionTypeNode.returnType;
-    let returnTypeAnalyzer = new TypeNodeAnalyzer(funcProto, <NamedTypeNode>returnType);
-    let returnTypeDesc: TypeNodeDesc = new TypeNodeDesc();
-    if (!returnTypeAnalyzer.isReturnVoid()) {
-      let wrapType = TypeUtil.getWrapperType(returnTypeAnalyzer.typeName);
+    let returnTypeDesc = new NamedTypeNodeDef(funcProto, <NamedTypeNode>returnType);
+    if (!returnTypeDesc.isReturnVoid()) {
+      let wrapType = TypeUtil.getWrapperType(returnTypeDesc.typeName);
       returnTypeDesc.codecType = wrapType;
-      returnTypeDesc.originalType = returnTypeAnalyzer.typeName;
-      deployMethod.hasReturnVal = true;
+      returnTypeDesc.originalType = returnTypeDesc.typeName;
+      functionDef.hasReturnVal = true;
     }
-    deployMethod.returnType = returnTypeDesc;
-    return deployMethod;
+    functionDef.returnType = returnTypeDesc;
+    return functionDef;
   }
 }
 
-export class StorageGenerator {
+export class ContractIntperter extends ClassInterperter {
+  contractName: string;
+  version: string;
+  cntrFuncDefs: FunctionDef[] = new Array();
+  msgFuncDefs: FunctionDef[] = new Array();
+  
+  constructor(clzPrototype: ClassPrototype)  {
+    super(clzPrototype);
+    this.contractName = Strings.lowerFirstCase(this.className);
+    this.version = "1.0";
+    this.resolveContractClass();
+  }
+  private resolveContractClass(): void {
+    if (this.classPrototype && this.classPrototype.instanceMembers) {
+      for (let [key, instance] of this.classPrototype.instanceMembers) {
+        if (instance && ElementUtil.isCntrFuncPrototype(instance)) {
+          this.cntrFuncDefs.push(new FunctionDef(<FunctionPrototype>instance));
+        }
+        if (instance && ElementUtil.isMessageFuncPrototype(instance)) {
+          this.msgFuncDefs.push(new FunctionDef(<FunctionPrototype>instance));
+        }
+      }
+    }
+  }
+}
 
-  private classPrototype: ClassPrototype;
-  storageDef: StorageDef;
+export class StorageInterpreter extends ClassInterperter {
 
+  fields: FieldDef[] = new Array();
   constructor(clzPrototype: ClassPrototype) {
-    this.storageDef = new StorageDef();
+    super(clzPrototype);
     this.classPrototype = clzPrototype;
+    console.log(`storage`, this.classPrototype.declaration.range.toString());
+    clzPrototype.declaration.range.toString();
     if (this.classPrototype.instanceMembers) {
       this.resolveInstanceMembers(this.classPrototype.instanceMembers);
     }
   }
 
   resolveInstanceMembers(instanceMembers: Map<string, DeclaredElement>): void {
-    this.storageDef.className = this.classPrototype.name;
     for (let [fieldName, element] of instanceMembers) {
       if (element.kind == ElementKind.FIELD_PROTOTYPE) {
-        // console.log("fieldName", fieldName);
         this.resolveFieldPrototype(<FieldPrototype>element);
       }
     }
   }
 
   resolveFieldPrototype(fieldPrototype: FieldPrototype): void {
-    let fieldDeclaration: FieldDeclaration = <FieldDeclaration>fieldPrototype.declaration;
-    let commonType: TypeNode | null = fieldDeclaration.type;
-    if (commonType && commonType.kind == NodeKind.NAMEDTYPE) {
-      let fieldDef: FieldDef = new FieldDef();
-      let typeNode = <NamedTypeNode>commonType;
-      let varName = "_" + fieldPrototype.name;
-      let key: string = this.classPrototype.name + fieldPrototype.name;
-      var typeNodeAnalyzer: TypeNodeAnalyzer = new TypeNodeAnalyzer(this.classPrototype, typeNode);
-      let typeName = typeNodeAnalyzer.typeName;
-      fieldDef.varName = varName;
-      fieldDef.storeKey = key;
-      fieldDef.fieldType = typeName;
-      fieldDef.name = fieldPrototype.name;
-      let wrapType = TypeUtil.getWrapperType(typeName);
-      fieldDef.fieldCodecType = wrapType;
-      fieldDef.storeKey = this.storageDef.className + fieldDef.name;
-      this.storageDef.fields.push(fieldDef);
-    }
+    this.fields.push(new FieldDef(fieldPrototype));
   }
 }

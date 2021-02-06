@@ -1,4 +1,4 @@
-{{#each stores}}
+{{#each storages}}
 class {{className}} {
   {{#each fields}}
   private {{varName}}: {{fieldType}} = null;

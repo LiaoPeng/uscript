@@ -1,16 +1,13 @@
 import {
-  SerializeInserter,
   InsertPoint
 } from "./inserter";
 
 import {
-  MethodDef
+  TypeEnum,
+  FunctionDef,
+  ContractProgram,
+  TypeUtil
 } from "./contract/base";
-
-import {
-  Type,
-  TypeKind,
-} from "../types";
 
 import {
   ElementKind,
@@ -19,6 +16,7 @@ import {
   FunctionPrototype,
   Program,
   VariableLikeElement,
+  FieldPrototype,
 } from "../program";
 
 import {
@@ -35,24 +33,18 @@ import {
   DecoratorNode,
   Node,
   ClassDeclaration,
-  NamedTypeNode
+  NamedTypeNode,
 } from "../ast";
 
 import {
   AstUtil,
-  TypeNodeAnalyzer,
-  TypeNodeDesc
+  NamedTypeNodeDef
 } from "./astutil";
 
 import {
   Strings,
   AbiUtils
 } from "./primitiveutil";
-
-import {
-  ContractInterperter, StorageGenerator
-} from './annotation';
-
 class StructDef {
   name: string = '';
   fields: Array<Object> = new Array<Object>();
@@ -67,13 +59,13 @@ export class ContractExportDef {
   className: string;
   contractName: string;
   version: string;
-  deployers: MethodDef[] = new Array();
-  messages: MethodDef[] = new Array();
+  deployers: FunctionDef[] = new Array();
+  messages: FunctionDef[] = new Array();
 
   constructor(clzName: string) {
     this.className = clzName;
-    this.contractName = Strings.lowerFirstCase(this.className);
     this.version = "1.0";
+    this.contractName = this.className;
   }
 }
 export class TypePair {
@@ -89,18 +81,36 @@ export class CellLayoutDef extends LayoutDef {
 }
 
 export class FieldDef {
+  protected fieldPrototype: FieldPrototype;
   layout: LayoutDef = new LayoutDef();
   name: string = "";
+  type: NamedTypeNodeDef | null = null;
   fieldType: string = "";
   fieldCodecType: string | undefined = "";
   storeKey: string = "";
   varName: string = "";
   path: string = "";
-}
 
-export class StorageDef {
-  className: string = "";
-  fields: FieldDef[] = new Array();
+  constructor(field: FieldPrototype) {
+    this.fieldPrototype = field;
+    this.name = field.name;
+    this.varName = "_"  + this.name;
+    this.storeKey = this.fieldPrototype.parent.name + this.name;
+    this.resolveField();
+  }
+
+  private resolveField(): void {
+    let fieldDeclaration: FieldDeclaration = <FieldDeclaration>this.fieldPrototype.declaration;
+    let commonType: TypeNode | null = fieldDeclaration.type;
+    if (commonType && commonType.kind == NodeKind.NAMEDTYPE) {
+      let typeNode = <NamedTypeNode>commonType;
+      this.type = new NamedTypeNodeDef(this.fieldPrototype, typeNode);
+      let typeName = this.type.typeName;     
+      this.fieldType = typeName;
+      let wrapType = TypeUtil.getWrapperType(typeName);
+      this.fieldCodecType = wrapType;
+    }
+  }
 }
 
 class AbiAliasDef {
@@ -185,10 +195,7 @@ class AbiDef {
   actions: Array<ActionDef> = new Array<ActionDef>();
   tables: Array<TableDef> = new Array<TableDef>();
 }
-export class TypeDef {
-  type: string = "";
-  index: i32 = 0;
-}
+
 
 export class ContractInfo {
 
@@ -199,19 +206,12 @@ export class ContractInfo {
   structsLookup: Map<string, StructDef> = new Map();
   elementLookup: Map<string, Element> = new Map();
   insertPointsLookup: Map<string, Array<InsertPoint>> = new Map<string, Array<InsertPoint>>();
-  exportDef: ContractExportDef = new ContractExportDef("");
-  stores: StorageDef[] = new Array();
-  typeMap: Map<string, TypeDef> = new Map<string, TypeDef>();
-  types: TypeDef[] = new Array();
-  typeIndex: i32 = 1;
-  fields: FieldDef[] = new Array();
 
   constructor(program: Program) {
     this.program = program;
-    this.resolve();
   }
 
-  private addAbiTypeAlias(typeNodeAnalyzer: TypeNodeAnalyzer): void {
+  private addAbiTypeAlias(typeNodeAnalyzer: NamedTypeNodeDef): void {
     var asTypes = typeNodeAnalyzer.getAsTypes();
     for (let asType of asTypes) {
       if (this.typeAliasSet.has(asType)) {
@@ -301,8 +301,8 @@ export class ContractInfo {
         let memberName = member.name.range.toString();
         let memberType: TypeNode | null = fieldDeclare.type;
         if (memberType && !AstUtil.haveSpecifyDecorator(fieldDeclare, DecoratorKind.DEPLOYER)) {
-          let typeNodeAnalyzer: TypeNodeAnalyzer = new TypeNodeAnalyzer(classPrototype, <NamedTypeNode>memberType);
-          let abiType = typeNodeAnalyzer.getAbiDeclareType();
+          let typeNodeAnalyzer: NamedTypeNodeDef = new NamedTypeNodeDef(classPrototype, <NamedTypeNode>memberType);
+          let abiType = typeNodeAnalyzer.getDeclareType();
           struct.addField(memberName, abiType);
           this.addAbiTypeAlias(typeNodeAnalyzer);
         }
@@ -365,8 +365,8 @@ export class ContractInfo {
     var parameters: ParameterNode[] = signature.parameters;
     for (let parameter of parameters) {
       let type: TypeNode = parameter.type;
-      let typeInfo = new TypeNodeAnalyzer(funcProto,  <NamedTypeNode>type);
-      let abiType = typeInfo.getAbiDeclareType();
+      let typeInfo = new NamedTypeNodeDef(funcProto,  <NamedTypeNode>type);
+      let abiType = typeInfo.getDeclareType();
       struct.addField(parameter.name.range.toString(), abiType);
       this.addAbiTypeAlias(typeInfo);
     }
@@ -374,102 +374,8 @@ export class ContractInfo {
     this.addToStruct(struct);
     this.abiInfo.actions.push(new ActionDef(funcName, funcName, this.getActionAbility(funcProto)));
   }
-
-
-  private isContractClassPrototype(element: Element): boolean {
-    if (element.kind == ElementKind.CLASS_PROTOTYPE) {
-      let clzPrototype = <ClassPrototype>element;
-      return clzPrototype.instanceMembers != null && 
-      AstUtil.haveSpecifyDecorator(clzPrototype.declaration, DecoratorKind.CONTRACT);
-    }
-    return false;
-  }
-
-  private isStoreClassPrototype(element: Element): boolean {
-    if (element.kind == ElementKind.CLASS_PROTOTYPE) {
-      let clzPrototype = <ClassPrototype>element;
-      return clzPrototype.instanceMembers != null &&
-        AstUtil.haveSpecifyDecorator(clzPrototype.declaration, DecoratorKind.STORAGE);
-    }
-    return false;
-  }
-
-  private pickUpAbiTypes(exportMethod: MethodDef): void {
-    exportMethod.paramters.forEach(item => {
-      let originalType = item.originalType;
-      if (!this.typeMap.has(originalType)) {
-        let typeDef = new TypeDef();
-        typeDef.index = this.typeIndex++;
-        typeDef.type = originalType;
-        this.typeMap.set(originalType, typeDef);
-      }
-      item.index = this.getIndexOfAbiTypes(originalType);
-    });
-  }
-
-  private getIndexOfAbiTypes(originalType: string): i32 {
-    let typeDef = this.typeMap.get(originalType);
-    return typeDef == undefined ? 0 : typeDef.index;
-  }
-
-  private resolve(): void {
-    var serializeInserter: SerializeInserter = new SerializeInserter(this.program);
-    var serializePoints = serializeInserter.getInsertPoints();
-    this.insertPointsLookup = InsertPoint.toSortedMap(serializePoints);
-
-    for (let [key, element] of this.program.elementsByName) {
-      // find class 
-      if (!this.elementLookup.has(key) && this.isContractClassPrototype(element)) {
-        let exportGenerator = new ContractInterperter(<ClassPrototype>element)
-        this.exportDef = exportGenerator.getExportMethods();
-      }
-      if (!this.elementLookup.has(key) && this.isStoreClassPrototype(element)) {
-        let storeGenerator: StorageGenerator = new StorageGenerator(<ClassPrototype>element);
-        this.stores.push(storeGenerator.storageDef);
-      }
-    }
-
-
-    for (let index = 0; index < this.exportDef.deployers.length; index++) {
-      let exportDef: MethodDef = this.exportDef.deployers[index];
-      this.pickUpAbiTypes(exportDef);
-    }
-
-    for (let index = 0; index < this.exportDef.messages.length; index++) {
-      let exportDef: MethodDef = this.exportDef.messages[index];
-      this.pickUpAbiTypes(exportDef);
-    }
-
-    for (let index = 0; index < this.stores.length; index++) {
-      let storeDef: StorageDef = this.stores[index];
-      storeDef.fields.forEach(item => {
-        let originalType = item.fieldType
-        if (!this.typeMap.has(originalType)) {
-          let typeDef = new TypeDef();
-          typeDef.index = this.typeIndex++;
-          typeDef.type = originalType;
-          this.typeMap.set(originalType, typeDef);
-        }
-        let typeDef = this.typeMap.get(originalType);
-        let cellLayoutDef: CellLayoutDef = new CellLayoutDef();
-        item.layout = cellLayoutDef;
-        if (typeDef) {
-          cellLayoutDef.cell.ty = typeDef.index;
-          cellLayoutDef.cell.key = item.storeKey;
-        }
-      })
-    }
-    for (let [key, value] of this.typeMap) {
-      this.types.push(value);
-    }
-    for (let index = 0; index < this.stores.length; index++) {
-      this.stores[index].fields.forEach(element => {
-        this.fields.push(element);
-      });
-    }
-  }
 }
 
-export function getContractInfo(program: Program): ContractInfo {
-  return new ContractInfo(program);
+export function getContractInfo(program: Program): ContractProgram {
+  return new ContractProgram(program);
 }

@@ -956,6 +956,7 @@ export enum DecoratorKind {
   MESSAGE,
   STORAGE,
   DEPLOYER,
+  CONSTRUCTOR,
   CONTRACT,
   DATABASE,
   PRIMARYID
@@ -977,6 +978,7 @@ export namespace DecoratorKind {
         /* Extension add START */
         case CharCode.c: {
           if (nameStr == 'contract') return DecoratorKind.CONTRACT;
+          if (nameStr == 'constructor') return DecoratorKind.CONSTRUCTOR;
           break;
         }
         case CharCode.d: {

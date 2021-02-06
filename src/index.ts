@@ -274,7 +274,7 @@ export * from "./program";
 export * from "./resolver";
 export * from "./tokenizer";
 export * from "./types";
-export * from "./ext/abi"
+export * from "./ext/contract";
 // TODO: When vTables are pulled, perhaps it would be better to extend an ASTWalker
 export * from "./extra/ast";
 import * as util from "./util/index";

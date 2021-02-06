@@ -867,8 +867,8 @@ exports.main = function main(argv, options, callback) {
 
     // Extension add START
     if (opts.sourceFile != null || !hasOutput) {
-      out = preprocess.outputCode(contractInfo, __dirname);
-      writeFile(opts.sourceFile, process.sourceText + out, baseDir);
+      out = preprocess.outputCode(process.sourceText, contractInfo, __dirname);
+      writeFile(opts.sourceFile, out , baseDir);
     }
 
     if (opts.sourceFile != null || !hasOutput) {
