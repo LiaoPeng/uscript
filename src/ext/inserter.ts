@@ -25,24 +25,16 @@ import {
 } from "../tokenizer";
 
 import {
-  Type,
-  TypeKind
-} from "../types";
-
-import {
   AstUtil,
-  TypeNodeAnalyzer,
-  TypeEnum
 } from "./astutil";
 
-import {
-  Collections
-} from "./collectionutil";
 
 import {
   Indent,
   Verify
 } from "./primitiveutil";
+
+import { NamedTypeNodeDef, TypeEnum } from "./contract/base";
 
 export class InsertPoint {
 
@@ -205,8 +197,8 @@ class SerializeGenerator {
           if (commonType && commonType.kind == NodeKind.NAMEDTYPE && AstUtil.haveSpecifyDecorator(fieldDeclaration, DecoratorKind.PRIMARYID)) {
             countOfPkDecorator++;
             Verify.verify(countOfPkDecorator <= 1, `Class ${this.classPrototype.name} should have only one primaryid decorator field.`);
-            let typeNodeAnalyzer: TypeNodeAnalyzer = new TypeNodeAnalyzer(this.classPrototype,  <NamedTypeNode>commonType);
-            if (!typeNodeAnalyzer.isPrimaryType()) {
+            let namedTypeNodeDef: NamedTypeNodeDef = new NamedTypeNodeDef(this.classPrototype,  <NamedTypeNode>commonType);
+            if (!namedTypeNodeDef.isPrimaryType()) {
               throw new Error(`Class ${this.classPrototype.name} member ${fieldName}'s type should be id_type or refer to id_type.`);
             }
             serializePoint.primaryKey.indent(4).add(`return this.${fieldName};`);
@@ -225,12 +217,12 @@ class SerializeGenerator {
 
     /** Implement the serrialize field */
     serializeField(fieldName: string, typeNode: NamedTypeNode): string[] {
-      var typeNodeAnalyzer: TypeNodeAnalyzer = new TypeNodeAnalyzer(this.classPrototype, typeNode);
+      var namedTypeNodeDef: NamedTypeNodeDef = new NamedTypeNodeDef(this.classPrototype, typeNode);
       var indent: Indent = new Indent();
       indent.indent(4);
-      if (typeNodeAnalyzer.isArray()) {
-        let argAbiTypeEnum = typeNodeAnalyzer.getArrayArgAbiTypeEnum();
-        let argTypeName = typeNodeAnalyzer.getArrayArg();
+      if (namedTypeNodeDef.isArray()) {
+        let argAbiTypeEnum = namedTypeNodeDef.getArrayArgAbiTypeEnum();
+        let argTypeName = namedTypeNodeDef.getArrayArg();
         if (argAbiTypeEnum == TypeEnum.NUMBER) {
           indent.add(`ds.writeVector<${argTypeName}>(this.${fieldName});`);
         } else if (argAbiTypeEnum == TypeEnum.STRING) {
@@ -239,11 +231,11 @@ class SerializeGenerator {
           indent.add(`ds.writeComplexVector<${argTypeName}>(this.${fieldName});`);
         }
       } else {
-        let abiTypeEnum = typeNodeAnalyzer.typeEnum;
+        let abiTypeEnum = namedTypeNodeDef.typeEnum;
         if (abiTypeEnum == TypeEnum.STRING) {
           indent.add(`ds.writeString(this.${fieldName});`);
         } else if (abiTypeEnum == TypeEnum.NUMBER) {
-          indent.add(`ds.write<${typeNodeAnalyzer.getDeclareType()}>(this.${fieldName});`);
+          indent.add(`ds.write<${namedTypeNodeDef.getDeclareType()}>(this.${fieldName});`);
         } else {
           indent.add(`this.${fieldName}.serialize(ds);`);
         }
@@ -252,12 +244,12 @@ class SerializeGenerator {
     }
 
     deserializeField(fieldName: string, type: NamedTypeNode): string[] {
-      var typeNodeAnalyzer: TypeNodeAnalyzer = new TypeNodeAnalyzer(this.classPrototype, type);
+      var namedTypeNodeDef: NamedTypeNodeDef = new NamedTypeNodeDef(this.classPrototype, type);
       var indent = new Indent();
       indent.indent(4);
-      if (typeNodeAnalyzer.isArray()) {
-        let argAbiTypeEnum = typeNodeAnalyzer.getArrayArgAbiTypeEnum();
-        let argTypeName = typeNodeAnalyzer.getArrayArg();
+      if (namedTypeNodeDef.isArray()) {
+        let argAbiTypeEnum = namedTypeNodeDef.getArrayArgAbiTypeEnum();
+        let argTypeName = namedTypeNodeDef.getArrayArg();
 
         if (argAbiTypeEnum == TypeEnum.NUMBER) {
           indent.add(`this.${fieldName} = ds.readVector<${argTypeName}>();`);
@@ -267,11 +259,11 @@ class SerializeGenerator {
           indent.add(`this.${fieldName} = ds.readComplexVector<${argTypeName}>();`);
         }
       } else {
-        let abiTypeEnum = typeNodeAnalyzer.typeEnum;
+        let abiTypeEnum = namedTypeNodeDef.typeEnum;
         if (abiTypeEnum == TypeEnum.STRING) {
           indent.add(`this.${fieldName} = ds.readString();`);
         } else if (abiTypeEnum == TypeEnum.NUMBER) {
-          indent.add(`this.${fieldName} = ds.read<${typeNodeAnalyzer.typeName}>();`);
+          indent.add(`this.${fieldName} = ds.read<${namedTypeNodeDef.typeName}>();`);
         } else {
           indent.add(`this.${fieldName}.deserialize(ds);`);
         }

@@ -153,7 +153,7 @@ export class ImportSourceDef {
         let importStatement = <ImportStatement> statement;
         if (importStatement.declarations) {
           importStatement.declarations.forEach(declaration => {
-            console.log(declaration.range.toString());
+            // console.log(declaration.range.toString());
             this.importedElement.add(declaration.range.toString());
           });
         }
@@ -303,7 +303,7 @@ export class NamedTypeNodeDef {
     var argType = new Array<string>();
     if (args) {
       for (let arg of args) {
-        console.log(`arg node type kind`, NodeKind[arg.kind]);
+        // console.log(`arg node type kind`, NodeKind[arg.kind]);
         if (arg.kind == NodeKind.NAMEDTYPE) {
           let typeAnalyzer: NamedTypeNodeDef = new NamedTypeNodeDef(this.parent, <NamedTypeNode>arg);
           this.typeArguments.push(typeAnalyzer);
