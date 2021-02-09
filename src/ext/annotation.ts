@@ -73,7 +73,7 @@ export class ContractProgram {
   storages: StorageInterpreter[] = new Array();
   types: NamedTypeNodeDef[] = new Array();
   fields: FieldDef[] = new Array();
-  imports: ImportSourceDef;
+  import: ImportSourceDef;
   
   private typeNodeMap: Map<string, NamedTypeNodeDef> = new Map<string, NamedTypeNodeDef>();
   private lastTypeSeq: i32 = 0;
@@ -81,8 +81,16 @@ export class ContractProgram {
   constructor(program: Program) {
     this.program = program;
     this.contract = null;
-    this.imports = new ImportSourceDef(program.sources);
+    this.import = new ImportSourceDef(program.sources);
     this.resolve();
+
+  }
+
+  private addDefaultImport(): void {
+    this.import.addImportsElement("FnParameters");
+    this.import.addImportsElement("Msg");
+    this.import.addImportsElement("ReturnData");
+    this.import.addImportsElement("Storage");
   }
 
   private resolve(): void {
@@ -96,6 +104,7 @@ export class ContractProgram {
       }
     }
     this.resolveTypes();
+    this.addDefaultImport();
   }
 
   private getIndexNum(): i32 {
@@ -111,6 +120,7 @@ export class ContractProgram {
     } else {
       item.index = this.getIndexOfType(originalType);
     }
+    this.import.addImportsElement(item.codecType);
   }
 
   private retriveTypesAndSetIndex(exportMethod: FunctionDef): void {

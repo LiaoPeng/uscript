@@ -54,7 +54,11 @@ Handlebars.registerHelper("selectorArr", function (context, options) {
 Handlebars.registerHelper("joinParams", function (context, options) {
   var data = [];
   for (var i = 0, j = context.length; i < j; i++) {
-    data.push("p" + i);
+    if (context[i].codecType == "ScaleString") {
+      data.push("p" + i + ".toString()");
+    } else {
+      data.push("p" + i + ".unwrap()");
+    }
   }
   return data.join(",");
 });
@@ -77,18 +81,21 @@ function removeSourceCode(sourceText, range, store) {
 }
 
 // Write text (also fallback)
-function outputCode(sourceText, abiInfo) {
+function outputCode(sourceText, contractInfo) {
   let mainTpl = fs.readFileSync(__dirname + "/tpl/main.tpl", { encoding: "utf8" });
   const render = Handlebars.compile(mainTpl);
-  const exportMain = render(abiInfo);
+  const exportMain = render(contractInfo);
   let storeTpl = fs.readFileSync(__dirname + "/tpl/store.tpl", { encoding: "utf8" });
   
-  for (let index = 0; index < abiInfo.storages.length; index ++) {
-    let store = Handlebars.compile(storeTpl)(abiInfo);
-    sourceText = removeSourceCode(sourceText, abiInfo.storages[index].range, store);
+  for (let index = 0; index < contractInfo.storages.length; index ++) {
+    let store = Handlebars.compile(storeTpl)(contractInfo.storages[index]);
+    sourceText = removeSourceCode(sourceText, contractInfo.storages[index].range, store);
   }
-  // let pro = sourceText  + exportMain;
-  // console.log("program", pro);
+
+  if (contractInfo.import.unimports.length != 0) {
+    let importElement = `import { ${contractInfo.import.unimports.join(", ")}} from "../../assembly";\n`;
+    sourceText = importElement + sourceText;
+  }
   return sourceText + exportMain;
 }
 

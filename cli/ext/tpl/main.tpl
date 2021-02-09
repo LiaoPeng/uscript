@@ -13,6 +13,7 @@ export function deploy(): i32 {
     _{{../contract.contractName}}.{{methodName}}({{#joinParams parameters}}{{/joinParams}}{{ctrDefaultVals}});
   }
   {{/each}}
+  return 0;
 }
 
 export function call(): i32 {
@@ -33,5 +34,5 @@ export function call(): i32 {
     {{/unless}}
   }
   {{/each}}
-
+  return 0;
 }

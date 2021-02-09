@@ -29,8 +29,7 @@ import {
 } from "../ast";
 
 import {
-  AstUtil,
-  NamedTypeNodeDef
+  AstUtil
 } from "./astutil";
 
 import {
@@ -39,6 +38,7 @@ import {
 } from "./primitiveutil";
 import { ProgramAnalyzar } from "./analyzer";
 import { ContractProgram } from "./annotation";
+import { NamedTypeNodeDef } from "./contract/base";
 class StructDef {
   name: string = '';
   fields: Array<Object> = new Array<Object>();

@@ -1,7 +1,6 @@
-{{#each storages}}
 class {{className}} {
   {{#each fields}}
-  private {{varName}}: {{fieldType}} = null;
+  private {{varName}}: {{fieldCodecType}} | null = null;
   {{/each}}
   {{#each fields}}
 
@@ -15,8 +14,7 @@ class {{className}} {
   set {{name}}(v: {{fieldType}}) {
     this.{{varName}} = new {{fieldCodecType}}(v);
     const st = new Storage<{{fieldCodecType}}>("{{storeKey}}");
-    st.store(this.{{varName}});
+    st.store(this.{{varName}}!);
   }
   {{/each}}
 }
-{{/each}}

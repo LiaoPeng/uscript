@@ -67,19 +67,10 @@ export class FunctionDef {
 
   resolve(): void {
     let params = this.funcProto.functionTypeNode.parameters; // FunctionDeclaration parameter types
-
     for (let index = 0; index < params.length; index++) {
       let type: ParameterNode = params[index];
+      // parameter name and parameter type
       let paramDesc: NamedTypeNodeDef = new NamedTypeNodeDef(this.funcProto, <NamedTypeNode>type.type);
-
-      let parameterType = type.type.range.toString();
-      let parameterName = type.name.range.toString();
-      console.log("parameterType", parameterType);
-      console.log("parameterName", parameterName);
-
-      paramDesc.originalType = parameterType;
-      paramDesc.codecType = TypeUtil.getWrapperType(parameterType);
-      paramDesc.defaultVal = TypeUtil.getDefaultVal(parameterType);
       this.parameters.push(paramDesc);
     }
     let returnType = this.funcProto.functionTypeNode.returnType;
@@ -111,7 +102,7 @@ export class TypeUtil {
     ["f64", "float64"],
     ["bool", "Bool"],
     ["boolean", "Bool"],
-    ["string", "String"]
+    ["string", "ScaleString"]
   ]);
 
   static defaultValMap: Map<string, string> = new Map([
@@ -145,7 +136,7 @@ export class TypeUtil {
 export class ImportSourceDef {
   private entrySources: Source[] = new Array();
   private importedElement: Set<String> = new Set();
-  unimports: Set<String> = new Set();
+  unimports: String[] = new Array();
 
   constructor(sources: Source[]) {
     sources.forEach(element => {
@@ -172,7 +163,9 @@ export class ImportSourceDef {
 
   addImportsElement(name: String): void {
     if (!this.importedElement.has(name)) {
-      this.unimports.add(name);
+      this.unimports.push(name);
+    } else {
+      this.importedElement.add(name);
     }
   }
 }
@@ -203,10 +196,13 @@ export class NamedTypeNodeDef {
   constructor(parent: Element, typeNode: NamedTypeNode) {
     this.parent = parent;
     this.typeNode = typeNode;
-    console.log("type node kind", NodeKind[this.typeNode.kind]);
+    // console.log("type node kind", NodeKind[this.typeNode.kind]);
     // Here various clz[]'s type name is [], not clz.
     this.typeName = this.typeNode.name.range.toString();
-    console.log("typename", this.typeName);
+    // console.log("typename", this.typeName);
+    this.originalType = this.typeName;
+    this.codecType = TypeUtil.getWrapperType(this.originalType);
+    this.defaultVal = TypeUtil.getDefaultVal(this.originalType);
     this.getArgs();
   }
 
