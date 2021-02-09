@@ -23,6 +23,7 @@ export class ContractIntperter extends ClassInterperter {
   version: string;
   cntrFuncDefs: FunctionDef[] = new Array();
   msgFuncDefs: FunctionDef[] = new Array();
+  isReturnable: boolean = false;
   
   constructor(clzPrototype: ClassPrototype)  {
     super(clzPrototype);
@@ -33,14 +34,26 @@ export class ContractIntperter extends ClassInterperter {
 
   private resolveContractClass(): void {
     if (this.classPrototype && this.classPrototype.instanceMembers) {
-      for (let [key, instance] of this.classPrototype.instanceMembers) {
-        if (instance && ElementUtil.isCntrFuncPrototype(instance)) {
+      this.classPrototype.instanceMembers.forEach((instance, _) => {
+        if (ElementUtil.isCntrFuncPrototype(instance)) {
           this.cntrFuncDefs.push(new FunctionDef(<FunctionPrototype>instance));
         }
-        if (instance && ElementUtil.isMessageFuncPrototype(instance)) {
-          this.msgFuncDefs.push(new FunctionDef(<FunctionPrototype>instance));
+        if (ElementUtil.isMessageFuncPrototype(instance)) {
+          let msgFunc = new FunctionDef(<FunctionPrototype>instance);
+          this.isReturnable = this.isReturnable || msgFunc.isReturnable;
+          this.msgFuncDefs.push(msgFunc);
         }
-      }
+      });
+    }
+  }
+
+  public calculateTypeIndex(typeNodeMap: Map<string, NamedTypeNodeDef>): void {
+    for (let index = 0; index < this.cntrFuncDefs.length; index++) {
+      this.cntrFuncDefs[index].calculateTypeIndex(typeNodeMap);
+    }
+
+    for (let index = 0; index < this.msgFuncDefs.length; index++) {
+      this.msgFuncDefs[index].calculateTypeIndex(typeNodeMap);
     }
   }
 }
@@ -59,12 +72,23 @@ export class StorageInterpreter extends ClassInterperter {
   }
 
   resolveInstanceMembers(instanceMembers: Map<string, DeclaredElement>): void {
-    for (let [fieldName, element] of instanceMembers) {
+    instanceMembers.forEach((element, _) => {
       if (element.kind == ElementKind.FIELD_PROTOTYPE) {
         this.fields.push(new FieldDef(<FieldPrototype>element));
       }
-    }
+    });
   }
+
+  calculateTypeIndex(typeNodeMap: Map<string, NamedTypeNodeDef>): void {
+    this.fields.forEach(item => {
+      if (item.type) {
+        item.type.calculateTypeIndex(typeNodeMap);
+      }
+      // TODO 
+      // this.import.addImportsElement(item.fieldCodecType);
+    });
+  }
+
 }
 
 export class ContractProgram {
@@ -76,89 +100,44 @@ export class ContractProgram {
   import: ImportSourceDef;
   
   private typeNodeMap: Map<string, NamedTypeNodeDef> = new Map<string, NamedTypeNodeDef>();
-  private lastTypeSeq: i32 = 0;
 
   constructor(program: Program) {
     this.program = program;
     this.contract = null;
     this.import = new ImportSourceDef(program.sources);
     this.resolve();
-
   }
 
   private addDefaultImport(): void {
     this.import.addImportsElement("FnParameters");
     this.import.addImportsElement("Msg");
-    this.import.addImportsElement("ReturnData");
     this.import.addImportsElement("Storage");
+    if (this.contract!.isReturnable) {
+      this.import.addImportsElement("ReturnData");
+    }
   }
 
   private resolve(): void {
-    for (let [key, element] of this.program.elementsByName) {
-      // find class 
+    this.program.elementsByName.forEach((element, _) => {
       if (ElementUtil.isContractClassPrototype(element)) {
         this.contract = new ContractIntperter(<ClassPrototype>element);
       }
       if (ElementUtil.isStoreClassPrototype(element)) {
         this.storages.push(new StorageInterpreter(<ClassPrototype>element));
       }
-    }
+    });
     this.resolveTypes();
     this.addDefaultImport();
   }
 
-  private getIndexNum(): i32 {
-    return ++this.lastTypeSeq;
-  }
-
-
-  private setIndexOfNamedTypeNode(item: NamedTypeNodeDef): void {
-    let originalType = item.originalType;
-    if (!this.typeNodeMap.has(originalType)) {
-      item.index = this.getIndexNum();
-      this.typeNodeMap.set(originalType, item);
-    } else {
-      item.index = this.getIndexOfType(originalType);
-    }
-    this.import.addImportsElement(item.codecType);
-  }
-
-  private retriveTypesAndSetIndex(exportMethod: FunctionDef): void {
-    exportMethod.parameters.forEach(item => {
-      this.setIndexOfNamedTypeNode(item);
-    });
-  }
-
-  private getIndexOfType(originalType: string): i32 {
-    let typeDef = this.typeNodeMap.get(originalType);
-    return typeDef == undefined ? 0 : typeDef.index;
-  }
-
   private resolveTypes(): void {
-    if (this.contract) {
-      for (let index = 0; index < this.contract.cntrFuncDefs.length; index++) {
-        let exportDef: FunctionDef = this.contract.cntrFuncDefs[index];
-        this.retriveTypesAndSetIndex(exportDef);
-      }
-
-      for (let index = 0; index < this.contract.msgFuncDefs.length; index++) {
-        let exportDef: FunctionDef = this.contract.msgFuncDefs[index];
-        this.retriveTypesAndSetIndex(exportDef);
-      }
-    }
-
+    this.contract!.calculateTypeIndex(this.typeNodeMap);
     for (let index = 0; index < this.storages.length; index++) {
-      let storeDef: StorageInterpreter = this.storages[index];
-      storeDef.fields.forEach(item => {
-        let originalType = item.fieldType;
-        if (!this.typeNodeMap.has(originalType) && item.type) {
-          item.type.index = this.getIndexNum();
-          this.typeNodeMap.set(originalType, item.type);
-        }
-      });
+      this.storages[index].calculateTypeIndex(this.typeNodeMap);
     }
-    for (let [key, value] of this.typeNodeMap) {
+    this.typeNodeMap.forEach((value, _) => {
       this.types.push(value);
-    }
+      this.import.addImportsElement(value.codecType);
+    });
   }
 }

@@ -23,7 +23,7 @@ export class FieldDef {
   name: string = "";
   type: NamedTypeNodeDef | null = null;
   fieldType: string = "";
-  fieldCodecType: string | undefined = "";
+  fieldCodecType: string = "";
   storeKey: string = "";
   varName: string = "";
   path: string = "";
@@ -54,10 +54,9 @@ export class FunctionDef {
   private funcProto: FunctionPrototype;
   methodName: string = "";
   parameters: NamedTypeNodeDef[] = new Array();
-  hasReturnVal: boolean = false;
+  isReturnable: boolean = false;
   returnType: NamedTypeNodeDef | undefined;
   defaultVals: string[] = new Array();
-  ctrDefaultVals: string = "";
 
   constructor(funcPrototype: FunctionPrototype) {
     this.funcProto = funcPrototype;
@@ -79,9 +78,18 @@ export class FunctionDef {
       let wrapType = TypeUtil.getWrapperType(returnTypeDesc.typeName);
       returnTypeDesc.codecType = wrapType;
       returnTypeDesc.originalType = returnTypeDesc.typeName;
-      this.hasReturnVal = true;
+      this.isReturnable = true;
     }
     this.returnType = returnTypeDesc;
+  }
+
+  public calculateTypeIndex(typeNodeMap: Map<string, NamedTypeNodeDef>): void {
+    this.parameters.forEach(item => {
+      item.calculateTypeIndex(typeNodeMap);
+    });
+    if (this.isReturnable) {
+      this.returnType!.calculateTypeIndex(typeNodeMap);
+    }
   }
 }
 
@@ -164,9 +172,8 @@ export class ImportSourceDef {
   addImportsElement(name: String): void {
     if (!this.importedElement.has(name)) {
       this.unimports.push(name);
-    } else {
-      this.importedElement.add(name);
-    }
+    } 
+    this.importedElement.add(name);
   }
 }
 
@@ -196,15 +203,25 @@ export class NamedTypeNodeDef {
   constructor(parent: Element, typeNode: NamedTypeNode) {
     this.parent = parent;
     this.typeNode = typeNode;
-    // console.log("type node kind", NodeKind[this.typeNode.kind]);
-    // Here various clz[]'s type name is [], not clz.
     this.typeName = this.typeNode.name.range.toString();
-    // console.log("typename", this.typeName);
     this.originalType = this.typeName;
     this.codecType = TypeUtil.getWrapperType(this.originalType);
     this.defaultVal = TypeUtil.getDefaultVal(this.originalType);
     this.getArgs();
   }
+
+  public calculateTypeIndex(typeNodeMap: Map<string, NamedTypeNodeDef>): void {
+    let originalType = this.originalType;
+    if (!typeNodeMap.has(originalType)) {
+      this.index = typeNodeMap.size + 1;
+      typeNodeMap.set(originalType, this);
+    } else {
+      let typeDef = typeNodeMap.get(originalType);
+      this.index = typeDef!.index;
+    }
+    // this.import.addImportsElement(item.codecType);
+  }
+
 
   getDeclareType(): string {
     return this.typeNode.range.toString();

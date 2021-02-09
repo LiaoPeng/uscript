@@ -25,11 +25,11 @@ export function call(): i32 {
     {{#each parameters}}
     let p{{_index}} = fnParameters.get<{{codecType}}>();
     {{/each}}
-    {{#if hasReturnVal}}
+    {{#if isReturnable}}
     let rs = _{{../contract.contractName}}.{{methodName}}({{#joinParams parameters}}{{/joinParams}});
     ReturnData.set<{{returnType.codecType}}>(new {{returnType.codecType}}(rs));
     {{/if}}
-    {{#unless hasReturnVal}}
+    {{#unless isReturnable}}
     _{{../contract.contractName}}.{{methodName}}({{#joinParams parameters}}{{/joinParams}});
     {{/unless}}
   }
