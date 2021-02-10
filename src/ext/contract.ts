@@ -1,8 +1,4 @@
 import {
-  InsertPoint
-} from "./inserter";
-
-import {
   ElementKind,
   Element,
   ClassPrototype,
@@ -30,14 +26,14 @@ import {
 
 import {
   AstUtil
-} from "./astutil";
+} from "./utils";
 
 import {
   Strings,
   AbiUtils
 } from "./primitiveutil";
 import { ProgramAnalyzar } from "./analyzer";
-import { ContractProgram } from "./annotation";
+import { ContractProgram } from "./interperter";
 import { NamedTypeNodeDef } from "./contract/base";
 class StructDef {
   name: string = '';
@@ -142,7 +138,6 @@ export class ContractInfo {
   typeAliasSet: Set<string> = new Set<string>();
   structsLookup: Map<string, StructDef> = new Map();
   elementLookup: Map<string, Element> = new Map();
-  insertPointsLookup: Map<string, Array<InsertPoint>> = new Map<string, Array<InsertPoint>>();
 
   constructor(program: Program) {
     this.program = program;

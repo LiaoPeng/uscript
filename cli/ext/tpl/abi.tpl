@@ -97,7 +97,7 @@
     {{#each types}}
     {
       "def": {
-        "primitive": "{{typeName}}"
+        "primitive": "{{name}}"
       }
     }
     {{/each}}

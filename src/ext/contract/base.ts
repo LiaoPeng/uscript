@@ -1,6 +1,6 @@
 import { FieldDeclaration, ImportStatement, NamedTypeNode, NodeKind, ParameterNode, Source, SourceKind, TypeDeclaration, TypeNode } from "../../ast";
 import { Element, ElementKind, FieldPrototype, FunctionPrototype, TypeDefinition } from "../../program";
-import { AstUtil } from "../astutil";
+import { AstUtil } from "../utils";
 import { Collections } from "../collectionutil";
 import { AbiHelper } from "../contract";
 import { LayoutDef } from "./storage";
@@ -82,9 +82,9 @@ export class FunctionDef {
     let returnType = this.funcProto.functionTypeNode.returnType;
     let returnTypeDesc = new NamedTypeNodeDef(this.funcProto, <NamedTypeNode>returnType);
     if (!returnTypeDesc.isReturnVoid()) {
-      let wrapType = TypeUtil.getWrapperType(returnTypeDesc.typeName);
+      let wrapType = TypeUtil.getWrapperType(returnTypeDesc.name);
       returnTypeDesc.codecType = wrapType;
-      returnTypeDesc.originalType = returnTypeDesc.typeName;
+      returnTypeDesc.originalType = returnTypeDesc.name;
       this.isReturnable = true;
     }
     this.returnType = returnTypeDesc;
@@ -186,21 +186,13 @@ export class ImportSourceDef {
 
 /**
  * Type node description
- * 
- * How to describe a type, 
- * basic type, type name and type
- * composite type 
- * array and map
- * 
- * method(name: string);
- * method(name: string, car: Car);
  */
 export class NamedTypeNodeDef {
   protected parent: Element;
   protected typeNode: NamedTypeNode;
   typeKind: TypeEnum | undefined;
   typeArguments: NamedTypeNodeDef[] = new Array();
-  typeName: string = "";
+  name: string = "";
   codecType: string = "";
   originalType: string = "";
   defaultVal: string = "";
@@ -209,8 +201,8 @@ export class NamedTypeNodeDef {
   constructor(parent: Element, typeNode: NamedTypeNode) {
     this.parent = parent;
     this.typeNode = typeNode;
-    this.typeName = typeNode.name.identifier.range.toString();
-    this.originalType = this.typeName;
+    this.name = typeNode.name.range.toString();
+    this.originalType = this.name;
     this.codecType = TypeUtil.getWrapperType(this.originalType);
     this.defaultVal = TypeUtil.getDefaultVal(this.originalType);
     this.getArgs();
@@ -225,7 +217,6 @@ export class NamedTypeNodeDef {
       let typeDef = typeNodeMap.get(originalType);
       this.index = typeDef!.index;
     }
-    // this.import.addImportsElement(item.codecType);
   }
 
 
@@ -234,11 +225,11 @@ export class NamedTypeNodeDef {
   }
 
   isReturnVoid(): boolean {
-    return this.typeName == "void";
+    return this.name == "void";
   }
 
   get typeEnum(): TypeEnum {
-    var typeName = this.typeName;
+    var typeName = this.name;
     if (AstUtil.isString(typeName)) {
       return TypeEnum.STRING;
     }
@@ -285,7 +276,7 @@ export class NamedTypeNodeDef {
 
   isPrimaryType(): boolean {
     if (this.typeEnum == TypeEnum.NUMBER) {
-      return this.findSourceAsTypeName(this.typeName) == "u64";
+      return this.findSourceAsTypeName(this.name) == "u64";
     }
     return false;
   }
@@ -294,7 +285,7 @@ export class NamedTypeNodeDef {
     if (this.typeNode.typeArguments) {
       return this.typeNode.typeArguments[0].range.toString();
     }
-    throw new Error(`The typenode is not array:${this.typeName}.`
+    throw new Error(`The typenode is not array:${this.name}.`
       + ` Location in ${AstUtil.location(this.typeNode.range)}`);
   }
 
@@ -342,7 +333,7 @@ export class NamedTypeNodeDef {
     if (!Collections.isEmptyArray(args)) {
       return args;
     }
-    return [this.typeName];
+    return [this.name];
   }
 
   /**

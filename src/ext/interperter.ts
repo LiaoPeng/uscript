@@ -1,10 +1,10 @@
 import { FunctionPrototype, ClassPrototype, ElementKind, DeclaredElement, FieldPrototype, Program } from "../program";
 import { Range } from "../tokenizer";
-import { ElementUtil } from "./astutil";
+import { ElementUtil } from "./utils";
 import { FunctionDef, FieldDef, ImportSourceDef, NamedTypeNodeDef } from "./contract/base";
 import { Strings } from "./primitiveutil";
 
-export class ClassInterperter {
+export class ClassInterpreter {
   protected classPrototype: ClassPrototype;
   className: string;
   instanceName: string;
@@ -18,7 +18,7 @@ export class ClassInterperter {
   }
 }
 
-export class ContractIntperter extends ClassInterperter {
+export class ContractInterpreter extends ClassInterpreter {
   name: string;
   version: string;
   cntrFuncDefs: FunctionDef[] = new Array();
@@ -58,7 +58,7 @@ export class ContractIntperter extends ClassInterperter {
   }
 }
 
-export class StorageInterpreter extends ClassInterperter {
+export class StorageInterpreter extends ClassInterpreter {
 
   fields: FieldDef[] = new Array();
   constructor(clzPrototype: ClassPrototype) {
@@ -87,7 +87,7 @@ export class StorageInterpreter extends ClassInterperter {
 
 export class ContractProgram {
   program: Program;
-  contract: ContractIntperter | null;
+  contract: ContractInterpreter | null;
   storages: StorageInterpreter[] = new Array();
   types: NamedTypeNodeDef[] = new Array();
   fields: FieldDef[] = new Array();
@@ -114,7 +114,7 @@ export class ContractProgram {
   private resolve(): void {
     this.program.elementsByName.forEach((element, _) => {
       if (ElementUtil.isContractClassPrototype(element)) {
-        this.contract = new ContractIntperter(<ClassPrototype>element);
+        this.contract = new ContractInterpreter(<ClassPrototype>element);
       }
       if (ElementUtil.isStoreClassPrototype(element)) {
         this.storages.push(new StorageInterpreter(<ClassPrototype>element));

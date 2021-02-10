@@ -14,22 +14,8 @@ import {
   ClassPrototype,
   Element,
   ElementKind,
-  TypeDefinition,
   FunctionPrototype
 } from "../program";
-
-import {
-  TypeEnum
-} from "./contract/base";
-
-import {
-  Collections
-} from "./collectionutil";
-
-import {
-  AbiHelper
-} from "./contract";
-
 
 export class ElementUtil {
 
