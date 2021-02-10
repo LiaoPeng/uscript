@@ -54,7 +54,7 @@ Handlebars.registerHelper("selectorArr", function (context, options) {
 Handlebars.registerHelper("joinParams", function (context, options) {
   var data = [];
   for (var i = 0, j = context.length; i < j; i++) {
-    if (context[i].codecType == "ScaleString") {
+    if (context[i].type.codecType == "ScaleString") {
       data.push("p" + i + ".toString()");
     } else {
       data.push("p" + i + ".unwrap()");

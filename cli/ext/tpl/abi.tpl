@@ -6,7 +6,7 @@
     "compiler": "asc 1.49.0-nightly"
   },
   "contract": {
-    "name": "{{contract.className}}",
+    "name": "{{contract.name}}",
     "version": "{{contract.version}}",
     "authors": [
       "[your_name] <[your_email]>"
@@ -19,12 +19,12 @@
         "args": [
           {{#each parameters}}
           {
-            "name": "{{typeName}}",
+            "name": "{{name}}",
             "type": {
               "displayName": [
-                "{{originalType}}"
+                "{{type.originalType}}"
               ],
-              "type": {{index}}
+              "type": {{type.index}}
             }
           }{{#if isMid}},{{/if}}
           {{/each}}
@@ -47,12 +47,12 @@
         "args": [
           {{#each parameters}}
           {
-            "name": "{{typeName}}",
+            "name": "{{name}}",
             "type": {
               "displayName": [
-                "{{originalType}}"
+                "{{type.originalType}}"
               ],
-              "type": {{index}}
+              "type": {{type.index}}
             }
           }{{#if isMid}},{{/if}}
           {{/each}}
@@ -97,7 +97,7 @@
     {{#each types}}
     {
       "def": {
-        "primitive": "{{type}}"
+        "primitive": "{{typeName}}"
       }
     }
     {{/each}}

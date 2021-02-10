@@ -1,8 +1,4 @@
 import {
-  AbiHelper
-} from "./contract";
-
-import {
   ClassDeclaration,
   DecoratorKind,
   FieldDeclaration,

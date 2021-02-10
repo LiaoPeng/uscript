@@ -1,4 +1,4 @@
-import { ImportStatement, NodeKind, SourceKind, Statement } from "../ast";
+import { ImportStatement, NodeKind, SourceKind } from "../ast";
 import { Program } from "../program";
 
 export class ProgramAnalyzar {
@@ -23,10 +23,10 @@ export class ProgramAnalyzar {
   }
 
   logFilesByName(): void {
-    for (let [key, file] of this.program.filesByName) {
+    this.program.filesByName.forEach((file, key) => {
       if (key == '../patractlabs/ask/examples/preprocess/origin') {
         console.log(`key: ${key}, file namne: ${file}`);
-        for (let index = 0; index < file.source.statements.length; index ++) {
+        for (let index = 0; index < file.source.statements.length; index++) {
           let statement = file.source.statements[index];
           console.log(`file Decalaration kind: ${NodeKind[statement.kind]}`);
           if (statement.kind == NodeKind.IMPORT) {
@@ -38,7 +38,7 @@ export class ProgramAnalyzar {
           }
         }
       }
-    }
+    });
   }
 
   logElementsByDeclaration(): void {
@@ -48,5 +48,4 @@ export class ProgramAnalyzar {
       }
     }
   }
-
 }

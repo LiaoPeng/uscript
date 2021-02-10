@@ -1,7 +1,3 @@
-export class StructDef {
-
-}
-
 export class TypePair {
   key: string = "";
   ty: i32 = 0;

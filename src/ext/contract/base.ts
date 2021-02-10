@@ -22,8 +22,6 @@ export class FieldDef {
   layout: LayoutDef = new LayoutDef();
   name: string = "";
   type: NamedTypeNodeDef | null = null;
-  fieldType: string = "";
-  fieldCodecType: string = "";
   storeKey: string = "";
   varName: string = "";
   path: string = "";
@@ -42,18 +40,30 @@ export class FieldDef {
     if (commonType && commonType.kind == NodeKind.NAMEDTYPE) {
       let typeNode = <NamedTypeNode>commonType;
       this.type = new NamedTypeNodeDef(this.fieldPrototype, typeNode);
-      let typeName = this.type.typeName;
-      this.fieldType = typeName;
-      let wrapType = TypeUtil.getWrapperType(typeName);
-      this.fieldCodecType = wrapType;
     }
+  }
+}
+
+export class ParameterNodeDef {
+  private parameterNode: ParameterNode;
+  name: string;
+  type: NamedTypeNodeDef;
+
+  constructor(parent: Element, parameterNode: ParameterNode) {
+    this.parameterNode = parameterNode;
+    this.name = this.parameterNode.name.range.toString();
+    this.type = new NamedTypeNodeDef(parent, <NamedTypeNode>this.parameterNode.type);
+  }
+
+  setTypeIndex(typeNodeMap: Map<string, NamedTypeNodeDef>): void {
+    this.type.setTypeIndex(typeNodeMap);
   }
 }
 
 export class FunctionDef {
   private funcProto: FunctionPrototype;
   methodName: string = "";
-  parameters: NamedTypeNodeDef[] = new Array();
+  parameters: ParameterNodeDef[] = new Array();
   isReturnable: boolean = false;
   returnType: NamedTypeNodeDef | undefined;
   defaultVals: string[] = new Array();
@@ -65,13 +75,10 @@ export class FunctionDef {
   }
 
   resolve(): void {
-    let params = this.funcProto.functionTypeNode.parameters; // FunctionDeclaration parameter types
-    for (let index = 0; index < params.length; index++) {
-      let type: ParameterNode = params[index];
-      // parameter name and parameter type
-      let paramDesc: NamedTypeNodeDef = new NamedTypeNodeDef(this.funcProto, <NamedTypeNode>type.type);
-      this.parameters.push(paramDesc);
-    }
+    let params = this.funcProto.functionTypeNode.parameters; 
+    params.forEach(param => {
+      this.parameters.push(new ParameterNodeDef(this.funcProto, param));
+    });
     let returnType = this.funcProto.functionTypeNode.returnType;
     let returnTypeDesc = new NamedTypeNodeDef(this.funcProto, <NamedTypeNode>returnType);
     if (!returnTypeDesc.isReturnVoid()) {
@@ -83,12 +90,12 @@ export class FunctionDef {
     this.returnType = returnTypeDesc;
   }
 
-  public calculateTypeIndex(typeNodeMap: Map<string, NamedTypeNodeDef>): void {
+  public setTypeIndex(typeNodeMap: Map<string, NamedTypeNodeDef>): void {
     this.parameters.forEach(item => {
-      item.calculateTypeIndex(typeNodeMap);
+      item.setTypeIndex(typeNodeMap);
     });
     if (this.isReturnable) {
-      this.returnType!.calculateTypeIndex(typeNodeMap);
+      this.returnType!.setTypeIndex(typeNodeMap);
     }
   }
 }
@@ -150,18 +157,17 @@ export class ImportSourceDef {
     sources.forEach(element => {
       if (element.sourceKind == SourceKind.USER_ENTRY) {
         this.entrySources.push(element);
-        this.resolveSource(element);
+        this.resolveImportSource(element);
       }
     });
   }
 
-  private resolveSource(source: Source): void {
+  private resolveImportSource(source: Source): void {
     source.statements.forEach(statement => {
       if (statement.kind == NodeKind.IMPORT) {
         let importStatement = <ImportStatement> statement;
         if (importStatement.declarations) {
           importStatement.declarations.forEach(declaration => {
-            // console.log(declaration.range.toString());
             this.importedElement.add(declaration.range.toString());
           });
         }
@@ -169,7 +175,7 @@ export class ImportSourceDef {
     });
   }
 
-  addImportsElement(name: String): void {
+  toImportElement(name: String): void {
     if (!this.importedElement.has(name)) {
       this.unimports.push(name);
     } 
@@ -203,14 +209,14 @@ export class NamedTypeNodeDef {
   constructor(parent: Element, typeNode: NamedTypeNode) {
     this.parent = parent;
     this.typeNode = typeNode;
-    this.typeName = this.typeNode.name.range.toString();
+    this.typeName = typeNode.name.identifier.range.toString();
     this.originalType = this.typeName;
     this.codecType = TypeUtil.getWrapperType(this.originalType);
     this.defaultVal = TypeUtil.getDefaultVal(this.originalType);
     this.getArgs();
   }
 
-  public calculateTypeIndex(typeNodeMap: Map<string, NamedTypeNodeDef>): void {
+  public setTypeIndex(typeNodeMap: Map<string, NamedTypeNodeDef>): void {
     let originalType = this.originalType;
     if (!typeNodeMap.has(originalType)) {
       this.index = typeNodeMap.size + 1;

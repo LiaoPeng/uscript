@@ -19,7 +19,7 @@ export class ClassInterperter {
 }
 
 export class ContractIntperter extends ClassInterperter {
-  contractName: string;
+  name: string;
   version: string;
   cntrFuncDefs: FunctionDef[] = new Array();
   msgFuncDefs: FunctionDef[] = new Array();
@@ -27,8 +27,9 @@ export class ContractIntperter extends ClassInterperter {
   
   constructor(clzPrototype: ClassPrototype)  {
     super(clzPrototype);
-    this.contractName = Strings.lowerFirstCase(this.className);
+    this.name = Strings.lowerFirstCase(this.className);
     this.version = "1.0";
+    this.instanceName = Strings.lowerFirstCase(this.className);
     this.resolveContractClass();
   }
 
@@ -47,14 +48,13 @@ export class ContractIntperter extends ClassInterperter {
     }
   }
 
-  public calculateTypeIndex(typeNodeMap: Map<string, NamedTypeNodeDef>): void {
-    for (let index = 0; index < this.cntrFuncDefs.length; index++) {
-      this.cntrFuncDefs[index].calculateTypeIndex(typeNodeMap);
-    }
-
-    for (let index = 0; index < this.msgFuncDefs.length; index++) {
-      this.msgFuncDefs[index].calculateTypeIndex(typeNodeMap);
-    }
+  public setTypeInde(typeNodeMap: Map<string, NamedTypeNodeDef>): void {
+    this.cntrFuncDefs.forEach(funcDef => {
+      funcDef.setTypeIndex(typeNodeMap);
+    });
+    this.msgFuncDefs.forEach(funcDef => {
+      funcDef.setTypeIndex(typeNodeMap);
+    });
   }
 }
 
@@ -63,9 +63,6 @@ export class StorageInterpreter extends ClassInterperter {
   fields: FieldDef[] = new Array();
   constructor(clzPrototype: ClassPrototype) {
     super(clzPrototype);
-    this.classPrototype = clzPrototype;
-    // console.log(`storage`, this.classPrototype.declaration.range.toString());
-    clzPrototype.declaration.range.toString();
     if (this.classPrototype.instanceMembers) {
       this.resolveInstanceMembers(this.classPrototype.instanceMembers);
     }
@@ -79,16 +76,13 @@ export class StorageInterpreter extends ClassInterperter {
     });
   }
 
-  calculateTypeIndex(typeNodeMap: Map<string, NamedTypeNodeDef>): void {
+  setTypeIndex(typeNodeMap: Map<string, NamedTypeNodeDef>): void {
     this.fields.forEach(item => {
       if (item.type) {
-        item.type.calculateTypeIndex(typeNodeMap);
+        item.type.setTypeIndex(typeNodeMap);
       }
-      // TODO 
-      // this.import.addImportsElement(item.fieldCodecType);
     });
   }
-
 }
 
 export class ContractProgram {
@@ -108,12 +102,12 @@ export class ContractProgram {
     this.resolve();
   }
 
-  private addDefaultImport(): void {
-    this.import.addImportsElement("FnParameters");
-    this.import.addImportsElement("Msg");
-    this.import.addImportsElement("Storage");
+  private addDefaultImports(): void {
+    this.import.toImportElement("FnParameters");
+    this.import.toImportElement("Msg");
+    this.import.toImportElement("Storage");
     if (this.contract!.isReturnable) {
-      this.import.addImportsElement("ReturnData");
+      this.import.toImportElement("ReturnData");
     }
   }
 
@@ -126,18 +120,19 @@ export class ContractProgram {
         this.storages.push(new StorageInterpreter(<ClassPrototype>element));
       }
     });
-    this.resolveTypes();
-    this.addDefaultImport();
-  }
+    this.setTypeIndex();
+    this.addDefaultImports();
 
-  private resolveTypes(): void {
-    this.contract!.calculateTypeIndex(this.typeNodeMap);
-    for (let index = 0; index < this.storages.length; index++) {
-      this.storages[index].calculateTypeIndex(this.typeNodeMap);
-    }
     this.typeNodeMap.forEach((value, _) => {
       this.types.push(value);
-      this.import.addImportsElement(value.codecType);
+      this.import.toImportElement(value.codecType);
+    });
+  }
+
+  private setTypeIndex(): void {
+    this.contract!.setTypeInde(this.typeNodeMap);
+    this.storages.forEach(storage => {
+      storage.setTypeIndex(this.typeNodeMap);
     });
   }
 }
