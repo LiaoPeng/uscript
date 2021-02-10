@@ -66,8 +66,20 @@ Handlebars.registerHelper("joinParams", function (context, options) {
 /**
  * Register the tag of equal
  */
-Handlebars.registerHelper("equal", function (v1, v2, options) {
+Handlebars.registerHelper("eq", function (v1, v2, options) {
   if (v1 == v2) {
+    return options.fn(this);
+  } else {
+    return options.inverse(this);
+  }
+});
+
+
+/**
+ * Register the tag of neq (Not equal)
+ */
+Handlebars.registerHelper("neq", function (v1, v2, options) {
+  if (v1 != v2) {
     return options.fn(this);
   } else {
     return options.inverse(this);

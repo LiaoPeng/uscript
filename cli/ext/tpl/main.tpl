@@ -6,7 +6,9 @@ export function deploy(): i32 {
   {{#each contract.cntrFuncDefs}}
   const {{methodName}}Selector: u8[] = {{#selectorArr methodName}}{{/selectorArr}};
   if (msg.isSelector({{methodName}}Selector)) {
+    {{#neq parameters.length 0}}
     const fnParameters = new FnParameters(msg.data);
+    {{/neq}}
     {{#each parameters}}
     let p{{_index}} = fnParameters.get<{{type.codecType}}>();
     {{/each}}
@@ -21,7 +23,9 @@ export function call(): i32 {
   {{#each contract.msgFuncDefs}}
   const {{methodName}}Selector: u8[] = {{#selectorArr methodName}}{{/selectorArr}};
   if (msg.isSelector({{methodName}}Selector)) {
+    {{#neq parameters.length 0}}
     const fnParameters = new FnParameters(msg.data);
+    {{/neq}}
     {{#each parameters}}
     let p{{_index}} = fnParameters.get<{{type.codecType}}>();
     {{/each}}
