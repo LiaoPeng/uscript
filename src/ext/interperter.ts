@@ -100,8 +100,13 @@ export class ContractProgram {
     this.contract = null;
     this.import = new ImportSourceDef(program.sources);
     this.resolve();
+    this.sortStorages();
   }
 
+  private sortStorages(): void {
+    this.storages.sort((a: ClassInterpreter, b: ClassInterpreter): i32 => b.range.start - a.range.start);
+  }
+  
   private addDefaultImports(): void {
     this.import.toImportElement("FnParameters");
     this.import.toImportElement("Msg");
