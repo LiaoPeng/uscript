@@ -85,7 +85,7 @@ var assemblyscript;
     assemblyscript = require("assemblyscript");
   } catch (e) {
     try { // `asc` on the command line (unnecessary in recent node)
-      throw new Error();
+      // throw new Error();
       assemblyscript = dynrequire("../dist/assemblyscript.js");
     } catch (e) {
       try { // `asc` on the command line without dist files (unnecessary in recent node)

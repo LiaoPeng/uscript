@@ -42,10 +42,10 @@ export class ProgramAnalyzar {
   }
 
   logElementsByDeclaration(): void {
-    for (let [key, value] of this.program.elementsByDeclaration) {
+    this.program.elementsByDeclaration.forEach((_, key) => {
       if (key.kind == NodeKind.IMPORTDECLARATION || key.kind == NodeKind.IMPORT) {
         console.log(`Decalaration kind: ${NodeKind[key.kind]}`);
       }
-    }
+    });
   }
 }
