@@ -73,7 +73,7 @@
         {{else}}
         "returnType": null,
         {{/if}}
-        "selector": "{{#selector methodName}}{{/selector}}"
+        "selector": {{#existSelector methodName messageDecorator.selector}}{{/existSelector}}
       }{{#if isMid}},{{/if}}
       {{/each}}
     ]
@@ -85,7 +85,7 @@
         {
           "layout": {
             "cell": {
-              "key": "{{#keySelector storeKey}}{{/keySelector}}",
+              "key": "{{#hexSelector storeKey}}{{/hexSelector}}",
               "ty": {{type.index}}
             }
           },

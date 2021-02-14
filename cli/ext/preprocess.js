@@ -27,7 +27,20 @@ Handlebars.registerHelper("selector", function (context, options) {
 /**
  * Register the tag of selector.
  */
-Handlebars.registerHelper("keySelector", function (context, options) {
+Handlebars.registerHelper("existSelector", function (key, existSelector) {
+  if (existSelector) {
+    return existSelector;
+  }
+  let keyHash = blake2.createHash('blake2b', { digestLength: 32 });
+  keyHash.update(Buffer.from(key));
+  let hexStr = keyHash.digest("hex");
+  return `"0x${hexStr.substr(0, 8)}"`;
+});
+
+/**
+ * Register the tag of selector.
+ */
+Handlebars.registerHelper("hexSelector", function (context, options) {
   let keyHash = blake2.createHash('blake2b', { digestLength: 32 });
   keyHash.update(Buffer.from(context));
   let hexStr = keyHash.digest("hex");
