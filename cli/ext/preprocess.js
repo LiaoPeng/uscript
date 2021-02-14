@@ -9,7 +9,7 @@ Handlebars.registerHelper("each", function (context, options) {
   for (var i = 0, j = context.length; i < j; i++) {
     let data = context[i];
     data._index = i;
-    data.isMid = (i != j - 1 || (i == 0 && j == 1));
+    data.isMid = (i != j - 1 || (i == 0 && j != 1));
     ret = ret + options.fn(data);
   }
   return ret;

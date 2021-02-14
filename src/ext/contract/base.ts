@@ -1,4 +1,4 @@
-import { FieldDeclaration, ImportStatement, NamedTypeNode, NodeKind, ParameterNode, Source, SourceKind, TypeDeclaration, TypeNode } from "../../ast";
+import { DecoratorKind, DecoratorNode, FieldDeclaration, ImportStatement, NamedTypeNode, NodeKind, ParameterNode, Source, SourceKind, TypeDeclaration, TypeNode } from "../../ast";
 import { Element, ElementKind, FieldPrototype, FunctionPrototype, TypeDefinition } from "../../program";
 import { AstUtil } from "../utils";
 import { Collections } from "../collectionutil";
@@ -60,6 +60,38 @@ export class ParameterNodeDef {
   }
 }
 
+export class DecoratorNodeDef {
+  private decorator: DecoratorNode;
+
+  constructor(decorator: DecoratorNode) {
+    this.decorator = decorator;    
+  }
+}
+
+export class MessageDecoratorNodeDef extends DecoratorNodeDef {
+  
+  private payable: boolean = false;
+  private mutates: String = "false";
+  private selector: string = "";
+
+  constructor(decorator: DecoratorNode) {
+    super(decorator);
+    if (decorator.args) {
+      decorator.args.forEach(expression => {
+        let identifier = AstUtil.getIdentifier(expression);
+        if (identifier == 'payable') {
+          this.payable = true;
+        } else if (identifier == 'mutates') {
+          this.mutates = AstUtil.getBinaryExprRight(expression);
+        } else if (identifier == 'selector') {
+          this.selector = AstUtil.getBinaryExprRight(expression);
+        }
+      });
+    }
+  }
+}
+
+
 export class FunctionDef {
   private funcProto: FunctionPrototype;
   methodName: string = "";
@@ -100,6 +132,17 @@ export class FunctionDef {
   }
 }
 
+export class MessageFuctionDef extends FunctionDef {
+
+  messageDecorator: MessageDecoratorNodeDef;
+
+  constructor(funcPrototype: FunctionPrototype) {
+    super(funcPrototype);
+    let msgDecorator = AstUtil.getSpecifyDecorator(funcPrototype.declaration, DecoratorKind.MESSAGE);
+    this.messageDecorator =  new MessageDecoratorNodeDef(msgDecorator!);
+  }
+
+}
 export class TypeUtil {
 
   static typeWrapperMap: Map<string, string> = new Map([
@@ -119,6 +162,23 @@ export class TypeUtil {
     ["boolean", "Bool"],
     ["string", "ScaleString"]
   ]);
+
+  static abiTypeMap: Map<string, string> = new Map([
+    ["i8", "i8"],
+    ["i16", "i16"],
+    ["i32", "i32"],
+    ["i64", "i64"],
+    ["isize", "i32"],
+    ["u8", "u8"],
+    ["u16", "u16"],
+    ["u32", "u32"],
+    ["u64", "u64"],
+    ["usize", "u32"],
+    ["bool", "bool"],
+    ["boolean", "bool"],
+    ["string", "str"]
+  ]);
+
 
   static defaultValMap: Map<string, string> = new Map([
     ["i8", "0"],
@@ -145,6 +205,11 @@ export class TypeUtil {
 
   static getDefaultVal(asType: string): string {
     let type: string | undefined = TypeUtil.defaultValMap.get(asType);
+    return type == undefined ? "" : type;
+  }
+
+  static getAbiType(asType: string): string {
+    let type: string | undefined = TypeUtil.abiTypeMap.get(asType);
     return type == undefined ? "" : type;
   }
 }
@@ -196,6 +261,7 @@ export class NamedTypeNodeDef {
   codecType: string = "";
   originalType: string = "";
   defaultVal: string = "";
+  abiType: string = "";
   index: i32 = 0;
 
   constructor(parent: Element, typeNode: NamedTypeNode) {
@@ -203,6 +269,7 @@ export class NamedTypeNodeDef {
     this.typeNode = typeNode;
     this.name = typeNode.name.range.toString();
     this.originalType = this.name;
+    this.abiType = TypeUtil.getAbiType(this.name);
     this.codecType = TypeUtil.getWrapperType(this.originalType);
     this.defaultVal = TypeUtil.getDefaultVal(this.originalType);
     this.getArgs();

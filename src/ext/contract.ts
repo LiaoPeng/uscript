@@ -232,7 +232,7 @@ export class ContractInfo {
         let fieldDeclare: FieldDeclaration = <FieldDeclaration>member;
         let memberName = member.name.range.toString();
         let memberType: TypeNode | null = fieldDeclare.type;
-        if (memberType && !AstUtil.haveSpecifyDecorator(fieldDeclare, DecoratorKind.DEPLOYER)) {
+        if (memberType && !AstUtil.hasSpecifyDecorator(fieldDeclare, DecoratorKind.DEPLOYER)) {
           let typeNodeAnalyzer: NamedTypeNodeDef = new NamedTypeNodeDef(classPrototype, <NamedTypeNode>memberType);
           let abiType = typeNodeAnalyzer.getDeclareType();
           struct.addField(memberName, abiType);

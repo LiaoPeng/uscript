@@ -3,7 +3,11 @@ import {
   DecoratorKind,
   Node,
   ClassDeclaration,
-  DecoratorNode
+  DecoratorNode,
+  Expression,
+  NodeKind,
+  IdentifierExpression,
+  BinaryExpression
 } from "../ast";
 
 import {
@@ -16,6 +20,7 @@ import {
   ElementKind,
   FunctionPrototype
 } from "../program";
+import { DecoratorNodeDef } from "./contract/base";
 
 export class ElementUtil {
 
@@ -23,7 +28,7 @@ export class ElementUtil {
     if (element.kind == ElementKind.CLASS_PROTOTYPE) {
       let clzPrototype = <ClassPrototype>element;
       return clzPrototype.instanceMembers != null &&
-        AstUtil.haveSpecifyDecorator(clzPrototype.declaration, DecoratorKind.CONTRACT);
+        AstUtil.hasSpecifyDecorator(clzPrototype.declaration, DecoratorKind.CONTRACT);
     }
     return false;
   }
@@ -32,7 +37,7 @@ export class ElementUtil {
     if (element.kind == ElementKind.CLASS_PROTOTYPE) {
       let clzPrototype = <ClassPrototype>element;
       return clzPrototype.instanceMembers != null &&
-        AstUtil.haveSpecifyDecorator(clzPrototype.declaration, DecoratorKind.STORAGE);
+        AstUtil.hasSpecifyDecorator(clzPrototype.declaration, DecoratorKind.STORAGE);
     }
     return false;
   }
@@ -43,7 +48,7 @@ export class ElementUtil {
    */
   static isCntrFuncPrototype(element: Element): boolean {
     if (element.kind == ElementKind.FUNCTION_PROTOTYPE) {
-      return AstUtil.haveSpecifyDecorator((<FunctionPrototype>element).declaration, DecoratorKind.CONSTRUCTOR);
+      return AstUtil.hasSpecifyDecorator((<FunctionPrototype>element).declaration, DecoratorKind.CONSTRUCTOR);
     }
     return false;
   }
@@ -55,7 +60,7 @@ export class ElementUtil {
   static isMessageFuncPrototype(element: Element): boolean {
     if (element.kind == ElementKind.FUNCTION_PROTOTYPE) {
       let funcType = <FunctionPrototype>element;
-      return AstUtil.haveSpecifyDecorator(funcType.declaration, DecoratorKind.MESSAGE);
+      return AstUtil.hasSpecifyDecorator(funcType.declaration, DecoratorKind.MESSAGE);
     }
     return false;
   }
@@ -79,19 +84,31 @@ export class AstUtil {
      * @param statement Ast declaration statement
      * @param kind The specify decorators
      */
-  static haveSpecifyDecorator(statement: DeclarationStatement, kind: DecoratorKind): boolean {
-    if (statement.decorators) {
+  static hasSpecifyDecorator(statement: DeclarationStatement, kind: DecoratorKind): boolean {
+    if (statement.decorators) {      
       for (let decorator of statement.decorators) {
-
         if (decorator.decoratorKind == kind) {
-          // console.log(`kind`, DecoratorKind[kind]);
-          // console.log(`Decorator`, decorator.range.toString());
-          // console.log(`Source`, decorator.range.source.text);
           return true;
         }
       }
     }
     return false;
+  }
+
+  static getIdentifier(expression: Expression): string {
+    if (expression.kind == NodeKind.IDENTIFIER) {
+      return (<IdentifierExpression>expression).text;
+    } else if (expression.kind == NodeKind.BINARY) {
+      return (<BinaryExpression>expression).left.range.toString();
+    }
+    return "";
+  }
+
+  static getBinaryExprRight(expression: Expression): string {
+    if (expression.kind == NodeKind.BINARY) {
+      return (<BinaryExpression>expression).right.range.toString();
+    }
+    return "";
   }
 
   static isString(typeName: string): boolean {

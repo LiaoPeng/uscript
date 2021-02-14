@@ -1,7 +1,7 @@
 import { FunctionPrototype, ClassPrototype, ElementKind, DeclaredElement, FieldPrototype, Program } from "../program";
 import { Range } from "../tokenizer";
 import { ElementUtil } from "./utils";
-import { FunctionDef, FieldDef, ImportSourceDef, NamedTypeNodeDef } from "./contract/base";
+import { FunctionDef, FieldDef, ImportSourceDef, NamedTypeNodeDef, MessageFuctionDef } from "./contract/base";
 import { Strings } from "./primitiveutil";
 
 export class ClassInterpreter {
@@ -40,7 +40,7 @@ export class ContractInterpreter extends ClassInterpreter {
           this.cntrFuncDefs.push(new FunctionDef(<FunctionPrototype>instance));
         }
         if (ElementUtil.isMessageFuncPrototype(instance)) {
-          let msgFunc = new FunctionDef(<FunctionPrototype>instance);
+          let msgFunc = new MessageFuctionDef(<FunctionPrototype>instance);
           this.isReturnable = this.isReturnable || msgFunc.isReturnable;
           this.msgFuncDefs.push(msgFunc);
         }
@@ -101,10 +101,19 @@ export class ContractProgram {
     this.import = new ImportSourceDef(program.sources);
     this.resolve();
     this.sortStorages();
+    this.getFields();
   }
 
   private sortStorages(): void {
     this.storages.sort((a: ClassInterpreter, b: ClassInterpreter): i32 => b.range.start - a.range.start);
+  }
+
+  private getFields(): void {
+    this.storages.forEach(item => {
+      item.fields.forEach(field => {
+        this.fields.push(field);
+      });
+    });
   }
   
   private addDefaultImports(): void {

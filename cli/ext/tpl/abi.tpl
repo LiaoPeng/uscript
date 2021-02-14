@@ -35,7 +35,7 @@
         "name": [
           "{{methodName}}"
         ],
-        "selector": "0xd183512b"
+        "selector": "{{#selector methodName}}{{/selector}}"
       }{{#if isMid}},{{/if}}
       {{/each}}
     ],
@@ -58,20 +58,22 @@
           {{/each}}
         ],
         "docs": [],
-        "mutates": false,
+        "mutates": {{messageDecorator.mutates}},
         "name": [
           "{{methodName}}"
         ],
-        "payable": false,
+        "payable": {{messageDecorator.payable}},
+        {{#if isReturnable}} 
         "returnType": {
-          {{#if hasReturnVal}}
           "displayName": [
             "{{returnType.originalType}}"
           ],
-          "type": {{index}}
-          {{/if}}
+          "type": {{returnType.index}}
         },
-        "selector": "0x1e5ca456"
+        {{else}}
+        "returnType": null,
+        {{/if}}
+        "selector": "{{#selector methodName}}{{/selector}}"
       }{{#if isMid}},{{/if}}
       {{/each}}
     ]
@@ -83,12 +85,12 @@
         {
           "layout": {
             "cell": {
-              "key": "{{#keySelector layout.cell.key}}{{/keySelector}}",
-              "ty": {{layout.cell.ty}}
+              "key": "{{#keySelector storeKey}}{{/keySelector}}",
+              "ty": {{type.index}}
             }
           },
           "name": "{{name}}"
-        }
+        }{{#if isMid}},{{/if}}
         {{/each}}
       ]
     }
@@ -97,9 +99,9 @@
     {{#each types}}
     {
       "def": {
-        "primitive": "{{name}}"
+        "primitive": "{{abiType}}"
       }
-    }
+    }{{#if isMid}},{{/if}}
     {{/each}}
   ]
 }
