@@ -14,6 +14,12 @@
   },
   "spec": {
     "constructors": [
+      {
+        "args": [ ],
+        "docs": [ "" ],
+        "name": [ "new" ],
+        "selector": "{{#selector 'new'}}{{short}}{{/selector}}"
+      }{{#neq contract.cntrFuncDefs.length 0}},{{/neq}}
       {{#each contract.cntrFuncDefs}}
       {
         "args": [
@@ -29,17 +35,13 @@
           }{{#if isMid}},{{/if}}
           {{/each}}
         ],
-        "docs": [
-          ""
-        ],
-        "name": [
-          "{{methodName}}"
-        ],
-        "selector": "{{#selector methodName}}{{/selector}}"
+        "docs": [ "" ],
+        "name": [ "{{methodName}}" ],
+        "selector": "{{#selector methodName}}{{short}}{{/selector}}"
       }{{#if isMid}},{{/if}}
       {{/each}}
     ],
-    "docs": [],
+    "docs": [ "" ],
     "events": [],
     "messages": [
       {{#each contract.msgFuncDefs}}
@@ -57,7 +59,7 @@
           }{{#if isMid}},{{/if}}
           {{/each}}
         ],
-        "docs": [],
+        "docs": [ "" ],
         "mutates": {{messageDecorator.mutates}},
         "name": [
           "{{methodName}}"
@@ -73,7 +75,7 @@
         {{else}}
         "returnType": null,
         {{/if}}
-        "selector": {{#existSelector methodName messageDecorator.selector}}{{/existSelector}}
+        "selector": "{{#existSelector methodName messageDecorator.selector}}{{short}}{{/existSelector}}"
       }{{#if isMid}},{{/if}}
       {{/each}}
     ]
@@ -85,7 +87,7 @@
         {
           "layout": {
             "cell": {
-              "key": "{{#hexSelector storeKey}}{{/hexSelector}}",
+              "key": "{{#selector storeKey}}{{hex}}{{/selector}}",
               "ty": {{type.index}}
             }
           },

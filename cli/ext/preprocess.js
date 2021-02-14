@@ -14,51 +14,48 @@ Handlebars.registerHelper("each", function (context, options) {
   }
   return ret;
 });
+
+function getSelector(key) {
+  let keyHash = blake2.createHash('blake2b', { digestLength: 32 });
+  keyHash.update(Buffer.from(key));
+  let hexStr = keyHash.digest("hex");
+  let selectorArr = [];
+  for (let index = 0; index < 4; index++) {
+    selectorArr.push("0x" + hexStr.substring(index * 2, index * 2 + 2));
+  }
+  let data = {
+    hex: hexStr,
+    short: `0x${hexStr.substr(0, 8)}`,
+    u8Arr: `[${selectorArr.join(",")}]`
+  };
+  return data;
+}
+
 /**
  * Register the tag of selector.
  */
 Handlebars.registerHelper("selector", function (context, options) {
-  let keyHash = blake2.createHash('blake2b', { digestLength: 32 });
-  keyHash.update(Buffer.from(context));
-  let hexStr = keyHash.digest("hex");
-  return `0x${hexStr.substr(0,8)}`;
+  // let data = context;
+  let data = getSelector(context);
+  return options.fn(data);
 });
 
 /**
  * Register the tag of selector.
  */
-Handlebars.registerHelper("existSelector", function (key, existSelector) {
+Handlebars.registerHelper("existSelector", function (key, existSelector, options) {
+  let data = {};
   if (existSelector) {
-    return existSelector;
+    let selectorArr = [];
+    for (let index = 0; index < 4; index++) {
+      selectorArr.push("0x" + existSelector.substring(index * 2 + 2, index * 2 + 4));
+    }
+    data.short = `${existSelector}`;
+    data.u8Arr = `[${selectorArr.join(",")}]`;
+  } else {
+    data = getSelector(key);
   }
-  let keyHash = blake2.createHash('blake2b', { digestLength: 32 });
-  keyHash.update(Buffer.from(key));
-  let hexStr = keyHash.digest("hex");
-  return `"0x${hexStr.substr(0, 8)}"`;
-});
-
-/**
- * Register the tag of selector.
- */
-Handlebars.registerHelper("hexSelector", function (context, options) {
-  let keyHash = blake2.createHash('blake2b', { digestLength: 32 });
-  keyHash.update(Buffer.from(context));
-  let hexStr = keyHash.digest("hex");
-  return `0x${hexStr}`;
-});
-
-/**
- * Register the tag of selector.
- */
-Handlebars.registerHelper("selectorArr", function (context, options) {
-  let keyHash = blake2.createHash('blake2b', { digestLength: 32 });
-  keyHash.update(Buffer.from(context));
-  let hexStr = keyHash.digest("hex");
-  let selectorArr = [];
-  for (let index = 0; index < 4; index ++) {
-    selectorArr.push("0x" + hexStr.substring(index * 2, index * 2 + 2));
-  }
-  return `[${selectorArr.join(",")}]`;
+  return options.fn(data);
 });
 
 /**

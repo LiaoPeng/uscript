@@ -4,6 +4,7 @@ import { AstUtil } from "../utils";
 import { Collections } from "../collectionutil";
 import { AbiHelper } from "../contract";
 import { LayoutDef } from "./storage";
+import { Strings } from "../primitiveutil";
 
 /**
  * The parameter type enum
@@ -84,13 +85,12 @@ export class MessageDecoratorNodeDef extends DecoratorNodeDef {
         } else if (identifier == 'mutates') {
           this.mutates = AstUtil.getBinaryExprRight(expression);
         } else if (identifier == 'selector') {
-          this.selector = AstUtil.getBinaryExprRight(expression);
+          this.selector = Strings.removeQuotation(AstUtil.getBinaryExprRight(expression));
         }
       });
     }
   }
 }
-
 
 export class FunctionDef {
   private funcProto: FunctionPrototype;
