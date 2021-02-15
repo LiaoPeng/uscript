@@ -72,7 +72,7 @@ export class DecoratorNodeDef {
 export class MessageDecoratorNodeDef extends DecoratorNodeDef {
   
   private payable: boolean = false;
-  private mutates: String = "false";
+  private mutates: string = "true";
   private selector: string = "";
 
   constructor(decorator: DecoratorNode) {

@@ -48,7 +48,7 @@ export class ContractInterpreter extends ClassInterpreter {
     }
   }
 
-  public setTypeInde(typeNodeMap: Map<string, NamedTypeNodeDef>): void {
+  public setTypeIndex(typeNodeMap: Map<string, NamedTypeNodeDef>): void {
     this.cntrFuncDefs.forEach(funcDef => {
       funcDef.setTypeIndex(typeNodeMap);
     });
@@ -120,7 +120,7 @@ export class ContractProgram {
     this.import.toImportElement("FnParameters");
     this.import.toImportElement("Msg");
     this.import.toImportElement("Storage");
-    if (this.contract!.isReturnable) {
+    if (this.contract && this.contract.isReturnable) {
       this.import.toImportElement("ReturnData");
     }
   }
@@ -144,7 +144,9 @@ export class ContractProgram {
   }
 
   private setTypeIndex(): void {
-    this.contract!.setTypeInde(this.typeNodeMap);
+    if (this.contract) {
+      this.contract.setTypeIndex(this.typeNodeMap);
+    }
     this.storages.forEach(storage => {
       storage.setTypeIndex(this.typeNodeMap);
     });
