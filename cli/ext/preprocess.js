@@ -24,7 +24,7 @@ function getSelector(key) {
     selectorArr.push("0x" + hexStr.substring(index * 2, index * 2 + 2));
   }
   let data = {
-    hex: hexStr,
+    hex: `0x${hexStr}`,
     short: `0x${hexStr.substr(0, 8)}`,
     u8Arr: `[${selectorArr.join(",")}]`
   };
