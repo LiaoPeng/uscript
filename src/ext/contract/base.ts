@@ -2,7 +2,6 @@ import { DecoratorKind, DecoratorNode, FieldDeclaration, ImportStatement, NamedT
 import { Element, ElementKind, FieldPrototype, FunctionPrototype, TypeDefinition } from "../../program";
 import { AstUtil } from "../utils";
 import { Collections } from "../collectionutil";
-import { AbiHelper } from "../contract";
 import { LayoutDef } from "./storage";
 import { Strings } from "../primitiveutil";
 
@@ -144,6 +143,29 @@ export class MessageFuctionDef extends FunctionDef {
 
 }
 export class TypeUtil {
+
+  /**
+   * Main node support internal abi type
+   * bool
+   */
+  static abiTypeLookup: Map<string, string> = new Map([
+    ["i8", "int8"],
+    ["i16", "int16"],
+    ["i32", "int32"],
+    ["i64", "int64"],
+    ["isize", "uin32"],
+    ["u8", "uint8"],
+    ["u16", "uint16"],
+    ["u32", "uint32"],
+    ["u64", "uint64"],
+    ["usize", "usize"],
+    ["f32", "float32"],
+    ["f64", "float64"],
+    ["bool", "bool"],
+    ["boolean", "bool"],
+    ["string", "string"],
+    ["String", "string"],
+  ]);
 
   static typeWrapperMap: Map<string, string> = new Map([
     ["i8", "Int8"],
@@ -314,7 +336,7 @@ export class NamedTypeNodeDef {
         let declaration = <TypeDeclaration>typeDefine.declaration;
         let _typeNode = <NamedTypeNode>declaration.type;
         let name = _typeNode.name.range.toString();
-        if (AbiHelper.abiTypeLookup.get(name) && name != "Asset") {
+        if (TypeUtil.abiTypeLookup.get(name) && name != "Asset") {
           return TypeEnum.NUMBER;
         }
       }
@@ -440,7 +462,7 @@ export class NamedTypeNodeDef {
   }
 
   findSourceAbiType(typeName: string): string {
-    var abiType: string | null = AbiHelper.abiTypeLookup.get(typeName) || null;
+    var abiType: string | null = TypeUtil.abiTypeLookup.get(typeName) || null;
     if (abiType) {
       return abiType;
     }

@@ -959,7 +959,8 @@ export enum DecoratorKind {
   CONSTRUCTOR,
   CONTRACT,
   DATABASE,
-  PRIMARYID
+  IGNORE,
+  EVENT
   /* Extension add END */
 }
 
@@ -988,6 +989,9 @@ export namespace DecoratorKind {
         /* Extension add END */
         case CharCode.e: {
           if (nameStr == "external") return DecoratorKind.EXTERNAL;
+          /* Extension add START */
+          if (nameStr == "event") return DecoratorKind.EVENT;
+          /* Extension add END */
           break;
         }
         case CharCode.f: {
@@ -1000,6 +1004,9 @@ export namespace DecoratorKind {
         }
         case CharCode.i: {
           if (nameStr == "inline") return DecoratorKind.INLINE;
+          /* Extension add START */
+          if (nameStr == "ignore") return DecoratorKind.IGNORE;
+          /* Extension add END */
           break;
         }
         case CharCode.l: {

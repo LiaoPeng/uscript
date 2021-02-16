@@ -2655,8 +2655,9 @@ export enum DecoratorFlags {
   DEPLOYER = 1 << 13,
   CONTRACT = 1 << 14,
   DATABASE = 1 << 15,
-  PRIMARYID = 1 << 16,
-  CONSTRUCTOR = 1 << 17
+  IGNORE = 1 << 16,
+  CONSTRUCTOR = 1 << 17,
+  EVENT = 1 << 18
   /* Extension add END */
 }
 
@@ -2682,6 +2683,8 @@ export namespace DecoratorFlags {
       case DecoratorKind.DEPLOYER: return DecoratorFlags.DEPLOYER;
       case DecoratorKind.CONSTRUCTOR: return DecoratorFlags.CONSTRUCTOR;
       case DecoratorKind.STORAGE: return DecoratorFlags.STORAGE;
+      case DecoratorKind.EVENT: return DecoratorFlags.EVENT;
+      case DecoratorKind.IGNORE: return DecoratorFlags.IGNORE;
       /* Extension add END */
       default: return DecoratorFlags.NONE;
     }
