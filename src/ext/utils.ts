@@ -18,28 +18,32 @@ import {
   ClassPrototype,
   Element,
   ElementKind,
+  FieldPrototype,
   FunctionPrototype
 } from "../program";
-import { DecoratorNodeDef } from "./contract/base";
 
 export class ElementUtil {
+
+  static isEventClassPrototype(element: Element): boolean {
+    if (element.kind == ElementKind.CLASS_PROTOTYPE) {
+      let clzPrototype = <ClassPrototype>element;
+      return AstUtil.hasSpecifyDecorator(clzPrototype.declaration, DecoratorKind.EVENT);
+    }
+    return false;
+  }
 
   static isContractClassPrototype(element: Element): boolean {
     if (element.kind == ElementKind.CLASS_PROTOTYPE) {
       let clzPrototype = <ClassPrototype>element;
-      return clzPrototype.instanceMembers != null &&
-        AstUtil.hasSpecifyDecorator(clzPrototype.declaration, DecoratorKind.CONTRACT);
+      return AstUtil.hasSpecifyDecorator(clzPrototype.declaration, DecoratorKind.CONTRACT);
     }
     return false;
   }
 
   static isStoreClassPrototype(element: Element): boolean {
-    if (element.kind == ElementKind.CLASS_PROTOTYPE) {
-      let clzPrototype = <ClassPrototype>element;
-      return clzPrototype.instanceMembers != null &&
-        AstUtil.hasSpecifyDecorator(clzPrototype.declaration, DecoratorKind.STORAGE);
-    }
-    return false;
+    return  (element.kind == ElementKind.CLASS_PROTOTYPE) 
+      ? AstUtil.hasSpecifyDecorator((<ClassPrototype>element).declaration, DecoratorKind.STORAGE)
+      : false;
   }
 
   /**
@@ -53,6 +57,14 @@ export class ElementUtil {
     return false;
   }
 
+  static isTopicField(element: Element): boolean {
+    if (element.kind == ElementKind.FIELD_PROTOTYPE) {
+      return AstUtil.hasSpecifyDecorator((<FieldPrototype>element).declaration, DecoratorKind.CONSTRUCTOR);
+    }
+    return false;
+  }
+
+
   /**
    * Check the element whether is action function prototype.
    * @param element 
@@ -64,6 +76,7 @@ export class ElementUtil {
     }
     return false;
   }
+
 
 }
 export class AstUtil {

@@ -960,7 +960,8 @@ export enum DecoratorKind {
   CONTRACT,
   DATABASE,
   IGNORE,
-  EVENT
+  EVENT,
+  TOPIC
   /* Extension add END */
 }
 
@@ -1026,6 +1027,10 @@ export namespace DecoratorKind {
         /* Extension add START */
         case CharCode.s: {
           if (nameStr == "storage") return DecoratorKind.STORAGE;
+          break;
+        }
+        case CharCode.t: {
+          if (nameStr == "topic") return DecoratorKind.TOPIC;
           break;
         }
         /* Extension add END */

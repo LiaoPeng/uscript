@@ -1,21 +1,35 @@
-import { FunctionPrototype, ClassPrototype, ElementKind, DeclaredElement, FieldPrototype, Program } from "../program";
+import { FunctionPrototype, ClassPrototype, ElementKind, FieldPrototype, Program } from "../program";
 import { Range } from "../tokenizer";
 import { ElementUtil } from "./utils";
 import { FunctionDef, FieldDef, ImportSourceDef, NamedTypeNodeDef, MessageFuctionDef } from "./contract/base";
 import { Strings } from "./primitiveutil";
 import { ProgramAnalyzar } from "./analyzer";
 
-export class ClassInterpreter {
+export class ClassInterpreter { 
   protected classPrototype: ClassPrototype;
   className: string;
   instanceName: string;
   range: Range;
+  fields: FieldDef[] = new Array();
 
   constructor(clzPrototype: ClassPrototype) {
     this.classPrototype = clzPrototype;
     this.className = clzPrototype.name;
     this.instanceName = "_" + this.className.toLowerCase();
     this.range = this.classPrototype.declaration.range;
+  }
+
+  isExtends(): boolean {
+    return this.classPrototype.basePrototype != null;
+  }
+
+  resolveInstanceMembers(): void {
+    this.classPrototype.instanceMembers &&
+      this.classPrototype.instanceMembers.forEach((element, _) => {
+        if (element.kind == ElementKind.FIELD_PROTOTYPE) {
+          this.fields.push(new FieldDef(<FieldPrototype>element));
+        }
+      });
   }
 }
 
@@ -35,7 +49,7 @@ export class ContractInterpreter extends ClassInterpreter {
   }
 
   private resolveContractClass(): void {
-    if (this.classPrototype && this.classPrototype.instanceMembers) {
+    this.classPrototype.instanceMembers &&
       this.classPrototype.instanceMembers.forEach((instance, _) => {
         if (ElementUtil.isCntrFuncPrototype(instance)) {
           this.cntrFuncDefs.push(new FunctionDef(<FunctionPrototype>instance));
@@ -46,7 +60,6 @@ export class ContractInterpreter extends ClassInterpreter {
           this.msgFuncDefs.push(msgFunc);
         }
       });
-    }
   }
 
   public setTypeIndex(typeNodeMap: Map<string, NamedTypeNodeDef>): void {
@@ -59,22 +72,19 @@ export class ContractInterpreter extends ClassInterpreter {
   }
 }
 
-export class StorageInterpreter extends ClassInterpreter {
+export class EventInterpreter extends ClassInterpreter {
 
-  fields: FieldDef[] = new Array();
   constructor(clzPrototype: ClassPrototype) {
     super(clzPrototype);
-    if (this.classPrototype.instanceMembers) {
-      this.resolveInstanceMembers(this.classPrototype.instanceMembers);
-    }
+    this.resolveInstanceMembers();
   }
+}
 
-  resolveInstanceMembers(instanceMembers: Map<string, DeclaredElement>): void {
-    instanceMembers.forEach((element, _) => {
-      if (element.kind == ElementKind.FIELD_PROTOTYPE) {
-        this.fields.push(new FieldDef(<FieldPrototype>element));
-      }
-    });
+export class StorageInterpreter extends ClassInterpreter {
+
+  constructor(clzPrototype: ClassPrototype) {
+    super(clzPrototype);
+    this.resolveInstanceMembers();
   }
 
   setTypeIndex(typeNodeMap: Map<string, NamedTypeNodeDef>): void {
@@ -88,7 +98,8 @@ export class StorageInterpreter extends ClassInterpreter {
 
 export class ContractProgram {
   program: Program;
-  contract: ContractInterpreter | null;
+  contract: ContractInterpreter | null = null;
+  events: EventInterpreter[] = new Array();
   storages: StorageInterpreter[] = new Array();
   types: NamedTypeNodeDef[] = new Array();
   fields: FieldDef[] = new Array();
@@ -98,7 +109,6 @@ export class ContractProgram {
 
   constructor(program: Program) {
     this.program = program;
-    this.contract = null;
     this.import = new ImportSourceDef(program.sources);
     this.resolve();
     this.sortStorages();
@@ -129,10 +139,14 @@ export class ContractProgram {
   private resolve(): void {
     this.program.elementsByName.forEach((element, _) => {
       if (ElementUtil.isContractClassPrototype(element)) {
+        console.log(`contract: ${element.name}`);
         this.contract = new ContractInterpreter(<ClassPrototype>element);
       }
       if (ElementUtil.isStoreClassPrototype(element)) {
         this.storages.push(new StorageInterpreter(<ClassPrototype>element));
+      }
+      if (ElementUtil.isEventClassPrototype(element)) {
+        this.events.push(new EventInterpreter(<ClassPrototype>element));
       }
     });
     this.setTypeIndex();

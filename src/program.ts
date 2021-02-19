@@ -1769,13 +1769,17 @@ export class Program extends DiagnosticEmitter {
       name,
       parent,
       declaration,
+      /* Extension add START */
       this.checkDecorators(declaration.decorators,
         DecoratorFlags.GLOBAL |
         DecoratorFlags.FINAL |
         DecoratorFlags.UNMANAGED |
         DecoratorFlags.STORAGE |
-        DecoratorFlags.CONTRACT
+        DecoratorFlags.CONTRACT |
+        DecoratorFlags.EVENT
       )
+      /* Extension add END */
+
     );
     if (!parent.add(name, element)) return null;
 

@@ -1,6 +1,6 @@
 import { DecoratorKind, DecoratorNode, FieldDeclaration, ImportStatement, NamedTypeNode, NodeKind, ParameterNode, Source, SourceKind, TypeDeclaration, TypeNode } from "../../ast";
 import { Element, ElementKind, FieldPrototype, FunctionPrototype, TypeDefinition } from "../../program";
-import { AstUtil } from "../utils";
+import { AstUtil, ElementUtil } from "../utils";
 import { Collections } from "../collectionutil";
 import { LayoutDef } from "./storage";
 import { Strings } from "../primitiveutil";
@@ -17,6 +17,27 @@ export enum TypeEnum {
   MAP,
   CLASS
 }
+
+export class DecoratorsInfo {
+  decorators: DecoratorNode[] | null;
+  isIgnore: boolean = false;
+  isTopic: boolean = false;
+
+  constructor(decorators: DecoratorNode[] | null) {
+    this.decorators = decorators;
+    if (this.decorators) {
+      this.decorators.forEach(decorator => {
+        if (decorator.decoratorKind == DecoratorKind.IGNORE) {
+          this.isIgnore = true;
+        }
+        if (decorator.decoratorKind == DecoratorKind.TOPIC) {
+          console.log(`DecoratorKind.TOPIC`);
+          this.isTopic = true;
+        }
+      });
+    }
+  }
+}
 export class FieldDef {
   protected fieldPrototype: FieldPrototype;
   layout: LayoutDef = new LayoutDef();
@@ -24,13 +45,14 @@ export class FieldDef {
   type: NamedTypeNodeDef | null = null;
   storeKey: string = "";
   varName: string = "";
-  path: string = "";
+  decorators: DecoratorsInfo;
 
   constructor(field: FieldPrototype) {
     this.fieldPrototype = field;
     this.name = field.name;
     this.varName = "_" + this.name;
     this.storeKey = this.fieldPrototype.parent.name + this.name;
+    this.decorators = new DecoratorsInfo(this.fieldPrototype.declaration.decorators);
     this.resolveField();
   }
 
@@ -43,6 +65,16 @@ export class FieldDef {
     }
   }
 }
+export class TopicFieldDef extends FieldDef {
+  
+  isTopic: boolean = false;
+  constructor(field: FieldPrototype) {
+    super(field);
+    this.isTopic = ElementUtil.isTopicField(field);
+  }
+
+}
+
 
 export class ParameterNodeDef {
   private parameterNode: ParameterNode;

@@ -2,8 +2,8 @@ class {{className}} {
   {{#each fields}}
   private {{varName}}: {{type.codecType}} | null = null;
   {{/each}}
+  
   {{#each fields}}
-
   get {{name}}(): {{type.originalType}} {
     if (this.{{varName}} === null) {
       const st = new Storage<{{type.codecType}}>("{{storeKey}}");

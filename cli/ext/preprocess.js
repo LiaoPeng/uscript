@@ -108,12 +108,18 @@ function outputCode(sourceText, contractInfo) {
   let mainTpl = fs.readFileSync(path.join(__dirname, "tpl", "main.tpl"), { encoding: "utf8" });
   const render = Handlebars.compile(mainTpl);
   const exportMain = render(contractInfo);
+
   let storeTpl = fs.readFileSync(path.join(__dirname, "tpl", "store.tpl"), { encoding: "utf8" });
-  
-  for (let index = 0; index < contractInfo.storages.length; index ++) {
+  for (let index = 0; index < contractInfo.storages.length; index++) {
     let store = Handlebars.compile(storeTpl)(contractInfo.storages[index]);
     sourceText = removeSourceCode(sourceText, contractInfo.storages[index].range, store);
   }
+
+  let eventTpl = fs.readFileSync(path.join(__dirname, "tpl", "event.tpl"), { encoding: "utf8" });
+  contractInfo.events.forEach(event => {
+    let code = Handlebars.compile(eventTpl)(event);
+    console.log(`code: ${code}`);
+  });
 
   if (contractInfo.import.unimports.length != 0) {
     let importElement = `import { ${contractInfo.import.unimports.join(", ")}} from "../../assembly";\n`;
