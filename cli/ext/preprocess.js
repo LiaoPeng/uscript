@@ -105,6 +105,9 @@ function removeSourceCode(sourceText, range, store) {
 
 // Write text (also fallback)
 function outputCode(sourceText, contractInfo) {
+  if (!contractInfo.contract) {
+    throw Error("Not found annotation @contract that indicate contract!");
+  }
   let mainTpl = fs.readFileSync(path.join(__dirname, "tpl", "main.tpl"), { encoding: "utf8" });
   const render = Handlebars.compile(mainTpl);
   const exportMain = render(contractInfo);
