@@ -5,6 +5,7 @@ import { Collections } from "../collectionutil";
 import { AbiHelper } from "../contract";
 import { LayoutDef } from "./storage";
 import { Strings } from "../primitiveutil";
+import { Range } from "../../tokenizer";
 
 /**
  * The parameter type enum
@@ -72,7 +73,7 @@ export class DecoratorNodeDef {
 export class MessageDecoratorNodeDef extends DecoratorNodeDef {
   
   private payable: boolean = false;
-  private mutates: string = "true";
+  mutates: string = "true";
   private selector: string = "";
 
   constructor(decorator: DecoratorNode) {
@@ -93,7 +94,7 @@ export class MessageDecoratorNodeDef extends DecoratorNodeDef {
 }
 
 export class FunctionDef {
-  private funcProto: FunctionPrototype;
+  protected funcProto: FunctionPrototype;
   methodName: string = "";
   parameters: ParameterNodeDef[] = new Array();
   isReturnable: boolean = false;
@@ -135,13 +136,18 @@ export class FunctionDef {
 export class MessageFuctionDef extends FunctionDef {
 
   messageDecorator: MessageDecoratorNodeDef;
+  bodyRange: Range;
+  havingMutates = false;
 
   constructor(funcPrototype: FunctionPrototype) {
     super(funcPrototype);
     let msgDecorator = AstUtil.getSpecifyDecorator(funcPrototype.declaration, DecoratorKind.MESSAGE);
     this.messageDecorator =  new MessageDecoratorNodeDef(msgDecorator!);
+    this.bodyRange = this.funcProto.bodyNode!.range;
+    if (this.messageDecorator.mutates == "false") {
+      this.havingMutates = true;
+    }
   }
-
 }
 export class TypeUtil {
 
@@ -150,11 +156,13 @@ export class TypeUtil {
     ["i16", "Int16"],
     ["i32", "Int32"],
     ["i64", "Int64"],
+    ["i128", "Int128"],
     ["isize", "Int32"],
     ["u8", "UInt8"],
     ["u16", "UInt16"],
     ["u32", "UInt32"],
     ["u64", "UInt64"],
+    ["u128", "UInt128"],
     ["usize", "UInt32"],
     ["f32", "float32"],
     ["f64", "float64"],
@@ -173,6 +181,8 @@ export class TypeUtil {
     ["u16", "u16"],
     ["u32", "u32"],
     ["u64", "u64"],
+    ["u128", "u128"],
+    ["i128", "i128"],
     ["usize", "u32"],
     ["bool", "bool"],
     ["boolean", "bool"],
@@ -190,6 +200,8 @@ export class TypeUtil {
     ["u16", "0"],
     ["u32", "0"],
     ["u64", "0"],
+    ["u128", "0"],
+    ["i128", "0"],
     ["usize", "0"],
     ["f32", "0"],
     ["f64", "0"],

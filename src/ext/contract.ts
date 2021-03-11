@@ -101,6 +101,8 @@ export class AbiHelper {
     ["boolean", "bool"],
     ["string", "string"],
     ["String", "string"],
+    ["u128", "u128"],
+    ["i128", "i128"]
   ]);
 }
 

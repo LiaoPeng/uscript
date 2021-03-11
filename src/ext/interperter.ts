@@ -120,8 +120,15 @@ export class ContractProgram {
     this.import.toImportElement("FnParameters");
     this.import.toImportElement("Msg");
     this.import.toImportElement("Storage");
-    if (this.contract && this.contract.isReturnable) {
+    if (this.contract!.isReturnable) {
       this.import.toImportElement("ReturnData");
+    }
+    let havingMutates = false;
+    this.contract!.msgFuncDefs.forEach(item => {
+      havingMutates = havingMutates || (<MessageFuctionDef>item).havingMutates;
+    });
+    if (havingMutates) {
+      this.import.toImportElement("StoreMode");
     }
   }
 
